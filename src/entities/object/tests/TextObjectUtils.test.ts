@@ -1,6 +1,6 @@
 // TextObjectUtils.test.ts
 import { describe, it, expect } from 'vitest';
-import { createTextObject } from '../factory/ObjectFactory.ts';
+import { createTextObject } from '../factory/TextObjectFactory.ts';
 import {
     updateTextContent,
     updateTextFontSize,

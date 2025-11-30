@@ -1,3 +1,4 @@
+// typescript
 export type BaseObject = {
     id: string;
     x: number;
@@ -8,15 +9,15 @@ export type BaseObject = {
 
     locked?: boolean;
     visible?: boolean;
-    transform?: Transform;
+    transform?: ObjectTransform;
     style?: ObjectStyle;
 };
 
-export type Transform = {
-    rotate: number;
-    scaleX: number;
-    scaleY: number;
-    opacity: number;
+export type ObjectTransform = {
+    rotate?: number;
+    scaleX?: number;
+    scaleY?: number;
+    opacity?: number;
 };
 
 export type ObjectStyle = {
@@ -24,10 +25,10 @@ export type ObjectStyle = {
     borderColor?: string;
     borderWidth?: number;
     shadow?: {
-        offsetX: number;
-        offsetY: number;
-        blur: number;
-        color: string;
+        offsetX?: number;
+        offsetY?: number;
+        blur?: number;
+        color?: string;
     };
 
     backgroundColor?: string;
@@ -56,10 +57,10 @@ export type ImageObject = BaseObject & {
     fit?: 'contain' | 'cover' | 'fill' | 'tile';
 
     crop?: {
-        x: number;
-        y: number;
-        width: number;
-        height: number;
+        x?: number;
+        y?: number;
+        width?: number;
+        height?: number;
     };
 
     filters?: {
@@ -90,5 +91,4 @@ export type SlideObject = TextObject | ImageObject;
 export type ObjectSelection = {
     slideId: string;
     objectIds: string[];
-    mode?: 'single' | 'multiple';
 };

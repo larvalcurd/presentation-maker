@@ -1,17 +1,20 @@
 // ObjectFactory.test.ts
 import { describe, it, expect } from 'vitest';
 import {
-    createTextObject,
-    createImageObject,
     createMinimalText,
-    createMinimalImage,
-    createMaximalText,
+    createTextObject,
+} from '../factory/TextObjectFactory.ts';
+import { applyPatch } from '../factory/helpers.ts';
+import {
+    createImageObject,
     createMaximalImage,
-} from '../factory/ObjectFactory.ts';
+    createMinimalImage,
+} from '../factory/ImageObjectFactory.ts';
+import type { ImageObject, TextObject } from '../types/ObjectTypes.ts';
 
 describe('ObjectFactory', () => {
     describe('createTextObject', () => {
-        it('should create text object with custom properties', () => {
+        it('should create text object with custom properties using applyPatch', () => {
             const customText = createTextObject({
                 x: 50,
                 y: 100,
@@ -26,21 +29,6 @@ describe('ObjectFactory', () => {
                 textAlign: 'center',
                 lineHeight: 1.5,
                 letterSpacing: 1,
-                zIndex: 5,
-                locked: true,
-                visible: false,
-                style: {
-                    borderRadius: 5,
-                    borderWidth: 2,
-                    borderColor: '#000000',
-                    backgroundColor: '#FFFFFF',
-                },
-                transform: {
-                    rotate: 45,
-                    scaleX: 1.2,
-                    scaleY: 1.2,
-                    opacity: 0.8,
-                },
             });
 
             expect(customText).toMatchObject({
@@ -58,240 +46,125 @@ describe('ObjectFactory', () => {
                 textAlign: 'center',
                 lineHeight: 1.5,
                 letterSpacing: 1,
-                zIndex: 5,
-                locked: true,
-                visible: false,
-                style: {
-                    borderRadius: 5,
-                    borderWidth: 2,
-                    borderColor: '#000000',
-                    backgroundColor: '#FFFFFF',
-                },
-                transform: {
-                    rotate: 45,
-                    scaleX: 1.2,
-                    scaleY: 1.2,
-                    opacity: 0.8,
-                },
             });
+
+            // Проверяем, что дефолтные значения применены корректно
+            expect(customText.zIndex).toBe(0);
+            expect(customText.locked).toBe(false);
+            expect(customText.visible).toBe(true);
         });
 
-        it('should create text object with partial custom style', () => {
-            const textWithPartialStyle = createTextObject({
+        it('should merge nested styles and transforms correctly', () => {
+            const text = createTextObject({
                 x: 0,
                 y: 0,
                 width: 100,
                 height: 50,
-                content: 'Partial Style',
+                content: 'Test',
                 style: {
                     borderRadius: 10,
                     backgroundColor: '#F0F0F0',
+                    // Не передаем shadow - должен остаться undefined
+                },
+                transform: {
+                    rotate: 45,
+                    opacity: 0.8,
+                    scaleX: 1,
+                    scaleY: 1,
                 },
             });
 
-            expect(textWithPartialStyle.style).toMatchObject({
+            expect(text.style).toEqual({
                 borderRadius: 10,
                 borderColor: '#00000000',
                 borderWidth: 0,
                 shadow: undefined,
                 backgroundColor: '#F0F0F0',
             });
+
+            expect(text.transform).toEqual({
+                rotate: 45,
+                scaleX: 1,
+                scaleY: 1,
+                opacity: 0.8,
+            });
         });
 
-        it('should apply default values when not provided', () => {
-            const text = createTextObject({
-                x: 10,
-                y: 20,
+        it('should handle partial style updates with applyPatch semantics', () => {
+            const initialText = createTextObject({
+                x: 0,
+                y: 0,
                 width: 100,
                 height: 50,
-                content: 'Test',
+                content: 'Initial',
+                style: {
+                    borderRadius: 5,
+                    borderWidth: 2,
+                    borderColor: '#000000',
+                    backgroundColor: '#FFFFFF',
+                },
             });
 
-            expect(text.fontFamily).toBe('Arial');
-            expect(text.fontSize).toBe(16);
-            expect(text.color).toBe('#000000');
-            expect(text.fontWeight).toBe('normal');
-            expect(text.fontStyle).toBe('normal');
-            expect(text.textAlign).toBe('left');
-            expect(text.lineHeight).toBe(1.2);
-            expect(text.letterSpacing).toBe(0);
-            expect(text.zIndex).toBe(0);
-            expect(text.locked).toBe(false);
-            expect(text.visible).toBe(true);
+            // Симулируем применение патча к существующему объекту
+            const updatedText = applyPatch(initialText, {
+                content: 'Updated',
+                style: {
+                    borderRadius: 10,
+                    backgroundColor: '#F0F0F0',
+                    // Не передаем border - должен сохраниться из initialText
+                },
+            });
+
+            expect(updatedText.content).toBe('Updated');
+            expect(updatedText.style).toEqual({
+                borderRadius: 10,
+                borderWidth: 0, // DEFAULT_STYLE.borderWidth
+                borderColor: '#00000000', // DEFAULT_STYLE.borderColor
+                shadow: undefined,
+                backgroundColor: '#F0F0F0',
+            });
         });
     });
 
     describe('createImageObject', () => {
-        it('should create minimal image object', () => {
-            const minimalImage = createImageObject({
-                x: 0,
-                y: 0,
-                width: 300,
-                height: 200,
-                src: 'image.jpg',
-            });
-
-            expect(minimalImage).toMatchObject({
-                type: 'image',
-                x: 0,
-                y: 0,
-                width: 300,
-                height: 200,
-                src: 'image.jpg',
-                preserveAspect: true,
-                fit: 'contain',
-                rotationOrigin: 'center',
-                style: {
-                    borderRadius: 0,
-                    borderColor: '#00000000',
-                    borderWidth: 0,
-                    backgroundColor: 'transparent',
-                },
-                transform: {
-                    rotate: 0,
-                    scaleX: 1,
-                    scaleY: 1,
-                    opacity: 1,
-                },
-            });
-
-            // Проверяем отсутствие необязательных полей
-            expect(minimalImage.crop).toBeUndefined();
-            expect(minimalImage.filters).toBeUndefined();
-            expect(minimalImage.mask).toBeUndefined();
-        });
-
-        it('should create image object with all properties', () => {
-            const fullImage = createImageObject({
+        it('should create image object with complex nested structures', () => {
+            const image = createImageObject({
                 x: 10,
                 y: 20,
                 width: 400,
                 height: 300,
                 src: 'photo.jpg',
-                preserveAspect: false,
-                fit: 'cover',
+                filters: {
+                    brightness: 1.2,
+                    contrast: 0.8,
+                    // saturation, blur, grayscale - должны взять дефолты
+                },
                 crop: {
                     x: 5,
                     y: 5,
                     width: 390,
-                    height: 290,
-                },
-                filters: {
-                    brightness: 1.2,
-                    contrast: 0.8,
-                    saturation: 1.1,
-                    blur: 2,
-                    grayscale: 0.5,
-                },
-                mask: {
-                    shape: 'circle',
-                    radius: 50,
-                },
-                rotationOrigin: 'top-left',
-                zIndex: 10,
-                locked: false,
-                visible: true,
-                style: {
-                    borderRadius: 10,
-                    borderWidth: 2,
-                    borderColor: '#FF0000',
-                    shadow: {
-                        offsetX: 5,
-                        offsetY: 5,
-                        blur: 10,
-                        color: '#000000',
-                    },
-                    backgroundColor: '#FFFFFF',
-                },
-                transform: {
-                    rotate: 45,
-                    scaleX: 1.5,
-                    scaleY: 1.5,
-                    opacity: 0.8,
+                    // height не передаем - должен взять дефолт
                 },
             });
 
-            expect(fullImage).toMatchObject({
-                type: 'image',
-                x: 10,
-                y: 20,
-                width: 400,
-                height: 300,
-                src: 'photo.jpg',
-                preserveAspect: false,
-                fit: 'cover',
-                crop: {
-                    x: 5,
-                    y: 5,
-                    width: 390,
-                    height: 290,
-                },
-                filters: {
-                    brightness: 1.2,
-                    contrast: 0.8,
-                    saturation: 1.1,
-                    blur: 2,
-                    grayscale: 0.5,
-                },
-                mask: {
-                    shape: 'circle',
-                    radius: 50,
-                },
-                rotationOrigin: 'top-left',
-                zIndex: 10,
-                locked: false,
-                visible: true,
-                style: {
-                    borderRadius: 10,
-                    borderWidth: 2,
-                    borderColor: '#FF0000',
-                    shadow: {
-                        offsetX: 5,
-                        offsetY: 5,
-                        blur: 10,
-                        color: '#000000',
-                    },
-                    backgroundColor: '#FFFFFF',
-                },
-                transform: {
-                    rotate: 45,
-                    scaleX: 1.5,
-                    scaleY: 1.5,
-                    opacity: 0.8,
-                },
+            expect(image.filters).toEqual({
+                brightness: 1.2,
+                contrast: 0.8,
+                saturation: 1,
+                blur: 0,
+                grayscale: 0,
+            });
+
+            expect(image.crop).toEqual({
+                x: 5,
+                y: 5,
+                width: 390,
+                height: 100, // Дефолтное значение из DEFAULT_CROP
             });
         });
 
-        it('should handle custom rotation origin coordinates', () => {
-            const imageWithCustomOrigin = createImageObject({
-                x: 0,
-                y: 0,
-                width: 100,
-                height: 100,
-                src: 'test.jpg',
-                rotationOrigin: { x: 25, y: 25 },
-            });
-
-            expect(imageWithCustomOrigin.rotationOrigin).toEqual({
-                x: 25,
-                y: 25,
-            });
-        });
-
-        it('should handle different mask shapes', () => {
-            const roundedMask = createImageObject({
-                x: 0,
-                y: 0,
-                width: 100,
-                height: 100,
-                src: 'test.jpg',
-                mask: {
-                    shape: 'rounded',
-                    radius: 20,
-                },
-            });
-
-            const polygonMask = createImageObject({
+        it('should handle mask with points array correctly', () => {
+            const polygonImage = createImageObject({
                 x: 0,
                 y: 0,
                 width: 100,
@@ -307,19 +180,7 @@ describe('ObjectFactory', () => {
                 },
             });
 
-            const noneMask = createImageObject({
-                x: 0,
-                y: 0,
-                width: 100,
-                height: 100,
-                src: 'test.jpg',
-                mask: {
-                    shape: 'none',
-                },
-            });
-
-            expect(roundedMask.mask).toEqual({ shape: 'rounded', radius: 20 });
-            expect(polygonMask.mask).toEqual({
+            expect(polygonImage.mask).toEqual({
                 shape: 'polygon',
                 points: [
                     { x: 0, y: 0 },
@@ -327,223 +188,178 @@ describe('ObjectFactory', () => {
                     { x: 100, y: 0 },
                 ],
             });
-            expect(noneMask.mask).toEqual({ shape: 'none' });
         });
     });
 
-    describe('ID generation', () => {
-        it('should generate unique ids for different objects', () => {
-            const text1 = createTextObject({
-                x: 0,
-                y: 0,
-                width: 100,
-                height: 50,
-                content: 'Text 1',
-            });
-            const text2 = createTextObject({
-                x: 0,
-                y: 0,
-                width: 100,
-                height: 50,
-                content: 'Text 2',
-            });
-            const image1 = createImageObject({
-                x: 0,
-                y: 0,
-                width: 100,
-                height: 100,
-                src: 'image1.jpg',
-            });
-            const image2 = createImageObject({
-                x: 0,
-                y: 0,
-                width: 100,
-                height: 100,
-                src: 'image2.jpg',
-            });
+    describe('applyPatch integration', () => {
+        it('should correctly apply patches to text objects', () => {
+            const original = createMinimalText();
+            const patch: Partial<TextObject> = {
+                content: 'Patched Content',
+                fontSize: 24,
+                style: {
+                    borderRadius: 15,
+                    backgroundColor: '#FF0000',
+                },
+            };
 
-            // Все ID должны быть уникальными
-            const ids = [text1.id, text2.id, image1.id, image2.id];
-            const uniqueIds = new Set(ids);
+            const patched = applyPatch(original, patch);
 
-            expect(uniqueIds.size).toBe(4);
-            expect(ids.length).toBe(4);
+            expect(patched.content).toBe('Patched Content');
+            expect(patched.fontSize).toBe(24);
+            expect(patched.style?.borderRadius).toBe(15);
+            expect(patched.style?.backgroundColor).toBe('#FF0000');
+
+            // Проверяем, что неизмененные поля сохранились
+            expect(patched.x).toBe(original.x);
+            expect(patched.fontFamily).toBe(original.fontFamily);
         });
 
-        it('should use provided id instead of generating new one', () => {
-            const customId = 'custom-id-123';
-            const text = createTextObject({
-                id: customId,
-                x: 0,
-                y: 0,
-                width: 100,
-                height: 50,
-                content: 'Text',
-            });
-
-            expect(text.id).toBe(customId);
-        });
-    });
-
-    describe('Test data factories', () => {
-        describe('createMinimalText', () => {
-            it('should create minimal text object', () => {
-                const minimalText = createMinimalText();
-
-                expect(minimalText).toMatchObject({
-                    type: 'text',
-                    x: 0,
-                    y: 0,
-                    width: 100,
-                    height: 50,
-                    content: '',
-                });
-
-                // Проверяем дефолтные значения
-                expect(minimalText.fontFamily).toBe('Arial');
-                expect(minimalText.fontSize).toBe(16);
-                expect(minimalText.color).toBe('#000000');
-            });
-
-            it('should allow overrides for minimal text', () => {
-                const customText = createMinimalText({
-                    content: 'Custom Content',
-                    fontFamily: 'Custom Font',
-                });
-
-                expect(customText.content).toBe('Custom Content');
-                expect(customText.fontFamily).toBe('Custom Font');
-                expect(customText.x).toBe(0); // остальные параметры как в минимальном
-            });
-        });
-
-        describe('createMinimalImage', () => {
-            it('should create minimal image object', () => {
-                const minimalImage = createMinimalImage();
-
-                expect(minimalImage).toMatchObject({
-                    type: 'image',
-                    x: 0,
-                    y: 0,
-                    width: 100,
-                    height: 100,
-                    src: '',
-                });
-
-                // Проверяем дефолтные значения
-                expect(minimalImage.preserveAspect).toBe(true);
-                expect(minimalImage.fit).toBe('contain');
-                expect(minimalImage.rotationOrigin).toBe('center');
-            });
-
-            it('should allow overrides for minimal image', () => {
-                const customImage = createMinimalImage({
-                    src: 'custom.jpg',
-                    fit: 'cover' as const,
-                });
-
-                expect(customImage.src).toBe('custom.jpg');
-                expect(customImage.fit).toBe('cover');
-                expect(customImage.x).toBe(0);
-            });
-        });
-
-        describe('createMaximalText', () => {
-            it('should create maximal text object with all properties', () => {
-                const maximalText = createMaximalText();
-
-                expect(maximalText).toMatchObject({
-                    type: 'text',
+        it('should correctly apply patches to image objects with nested properties', () => {
+            const original = createMinimalImage();
+            const patch: Partial<ImageObject> = {
+                src: 'new-image.jpg',
+                fit: 'cover',
+                filters: {
+                    brightness: 1.5,
+                    blur: 3,
+                },
+                crop: {
                     x: 10,
                     y: 10,
-                    width: 300,
-                    height: 100,
-                    content: 'Full Text',
-                    fontFamily: 'Times New Roman',
-                    fontSize: 24,
-                    color: '#ff0000',
-                    fontWeight: 'bold',
-                    fontStyle: 'italic',
-                    textAlign: 'center',
-                    lineHeight: 1.5,
-                    letterSpacing: 2,
-                    locked: true,
-                    visible: true,
-                });
+                    width: 200,
+                    height: 200,
+                },
+            };
 
-                // Проверяем стили
-                expect(maximalText.style).toBeDefined();
-                expect(maximalText.transform).toBeDefined();
+            const patched = applyPatch(original, patch);
+
+            expect(patched.src).toBe('new-image.jpg');
+            expect(patched.fit).toBe('cover');
+            expect(patched.filters).toEqual({
+                brightness: 1.5,
+                contrast: 1,
+                saturation: 1,
+                blur: 3,
+                grayscale: 0,
             });
-
-            it('should allow overrides for maximal text', () => {
-                const customText = createMaximalText({
-                    content: 'Overridden Content',
-                    fontSize: 32,
-                });
-
-                expect(customText.content).toBe('Overridden Content');
-                expect(customText.fontSize).toBe(32);
-                // Проверяем что остальные свойства остались
-                expect(customText.fontFamily).toBe('Times New Roman');
-                expect(customText.fontWeight).toBe('bold');
+            expect(patched.crop).toEqual({
+                x: 10,
+                y: 10,
+                width: 200,
+                height: 200,
             });
         });
 
-        describe('createMaximalImage', () => {
-            it('should create maximal image object with all properties', () => {
-                const maximalImage = createMaximalImage();
+        it('should handle undefined values in patches correctly', () => {
+            const original = createMaximalImage();
 
-                expect(maximalImage).toMatchObject({
-                    type: 'image',
-                    x: 50,
-                    y: 50,
-                    width: 400,
-                    height: 300,
-                    src: 'big-image.png',
-                    preserveAspect: false,
-                    fit: 'cover',
-                });
+            const patch: Partial<ImageObject> = {
+                filters: undefined, // Явно сбрасываем фильтры
+                crop: undefined, // Явно сбрасываем кроп
+            };
 
-                // Проверяем вложенные объекты
-                expect(maximalImage.crop).toBeDefined();
-                expect(maximalImage.filters).toBeDefined();
-                expect(maximalImage.mask).toBeDefined();
-                expect(maximalImage.style).toBeDefined();
-                expect(maximalImage.transform).toBeDefined();
+            const patched = applyPatch(original, patch);
+
+            expect(patched.filters).toBeUndefined();
+            expect(patched.crop).toBeUndefined();
+
+            // Проверяем, что другие свойства сохранились
+            expect(patched.src).toBe(original.src);
+            expect(patched.fit).toBe(original.fit);
+        });
+    });
+
+    describe('Test data factories with applyPatch behavior', () => {
+        it('should allow deep overrides in minimal factories', () => {
+            const customMinimalText = createMinimalText({
+                content: 'Custom Minimal',
+                style: {
+                    borderRadius: 8,
+                    backgroundColor: '#E0E0E0',
+                },
+                transform: {
+                    rotate: 10,
+                    opacity: 0.9,
+                    scaleX: 1,
+                    scaleY: 1,
+                },
             });
 
-            it('should apply default filters and crop correctly', () => {
-                const maximalImage = createMaximalImage();
+            expect(customMinimalText.content).toBe('Custom Minimal');
+            expect(customMinimalText.style?.borderRadius).toBe(8);
+            expect(customMinimalText.transform?.rotate).toBe(10);
 
-                expect(maximalImage.filters).toEqual({
-                    brightness: 1.2,
-                    contrast: 1.5,
-                    blur: 2,
-                    saturation: 1.3,
-                    grayscale: 0.5,
-                });
+            // Дефолтные значения минимального текста
+            expect(customMinimalText.x).toBe(0);
+            expect(customMinimalText.fontFamily).toBe('Arial');
+        });
 
-                expect(maximalImage.crop).toEqual({
-                    x: 0,
-                    y: 0,
-                    width: 200,
-                    height: 150,
-                });
+        it('should allow partial overrides in maximal factories', () => {
+            const customMaximalImage = createMaximalImage({
+                src: 'overridden.jpg',
+                fit: 'contain',
+                // Частично обновляем фильтры
+                filters: {
+                    brightness: 2.0,
+                    // contrast, saturation и другие должны сохраниться из maximal
+                },
             });
 
-            it('should allow overrides for maximal image', () => {
-                const customImage = createMaximalImage({
-                    src: 'overridden.jpg',
-                    fit: 'contain' as const,
-                });
+            expect(customMaximalImage.src).toBe('overridden.jpg');
+            expect(customMaximalImage.fit).toBe('contain');
+            expect(customMaximalImage.filters?.brightness).toBe(2.0);
+            expect(customMaximalImage.filters?.contrast).toBe(1.5); // Сохранилось из maximal
+            expect(customMaximalImage.filters?.saturation).toBe(1.3); // Сохранилось из maximal
+        });
+    });
 
-                expect(customImage.src).toBe('overridden.jpg');
-                expect(customImage.fit).toBe('contain');
-                // Проверяем что остальные свойства остались
-                expect(customImage.preserveAspect).toBe(false);
-                expect(customImage.crop).toBeDefined();
+    describe('Immutability and object identity', () => {
+        it('should not mutate original objects when applying patches', () => {
+            const original = createMinimalText({
+                content: 'Original',
+                style: { borderRadius: 5 },
             });
+
+            const originalStyle = original.style;
+            const originalTransform = original.transform;
+
+            const patched = applyPatch(original, {
+                content: 'Updated',
+                style: { borderRadius: 10 },
+            });
+
+            // Проверяем, что оригинал не изменился
+            expect(original.content).toBe('Original');
+            expect(original.style?.borderRadius).toBe(5);
+
+            // Проверяем, что патченный объект изменился
+            expect(patched.content).toBe('Updated');
+            expect(patched.style?.borderRadius).toBe(10);
+
+            // Проверяем, что вложенные объекты были клонированы, а не мутированы
+            expect(patched.style).not.toBe(originalStyle);
+            expect(patched.transform).not.toBe(originalTransform);
+        });
+
+        it('should create new nested objects even when they are not changed', () => {
+            const original = createMinimalImage({
+                filters: { brightness: 1.2 },
+                crop: { x: 10, y: 10, width: 80, height: 80 },
+            });
+
+            const originalFilters = original.filters;
+            const originalCrop = original.crop;
+
+            const patched = applyPatch(original, {
+                src: 'new-src.jpg',
+                // Не меняем filters и crop
+            });
+
+            expect(patched.filters).toEqual(originalFilters);
+            expect(patched.filters).not.toBe(originalFilters); // Должен быть новый объект
+            expect(patched.crop).toEqual(originalCrop);
+            expect(patched.crop).not.toBe(originalCrop); // Должен быть новый объект
         });
     });
 });

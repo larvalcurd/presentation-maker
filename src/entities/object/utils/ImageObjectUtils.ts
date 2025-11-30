@@ -1,26 +1,12 @@
 import type { ImageObject } from '../types/ObjectTypes.ts';
-
-function copyTransform(transform: ImageObject['transform']) {
-    if (!transform) return transform;
-    return { ...transform };
-}
-
-function copyFilters(filters: ImageObject['filters']) {
-    if (!filters) return filters;
-    return { ...filters };
-}
-
-function copyCrop(crop: ImageObject['crop']) {
-    if (!crop) return crop;
-    return { ...crop };
-}
+import { cloneTransform, cloneFilters, cloneCrop } from '../factory/helpers.ts';
 
 function copyNested(object: ImageObject): ImageObject {
     return {
         ...object,
-        transform: copyTransform(object.transform),
-        filters: copyFilters(object.filters),
-        crop: copyCrop(object.crop),
+        transform: cloneTransform(object.transform),
+        filters: cloneFilters(object.filters),
+        crop: cloneCrop(object.crop),
     };
 }
 

@@ -1,6 +1,5 @@
 // ImageObjectUtils.test.ts
 import { describe, it, expect } from 'vitest';
-import { createImageObject } from '../factory/ObjectFactory.ts';
 import {
     updateImageSource,
     updateImageFit,
@@ -8,6 +7,7 @@ import {
     updateImageCrop,
 } from '../utils/ImageObjectUtils.ts';
 import type { ImageObject } from '../types/ObjectTypes.ts';
+import { createImageObject } from '../factory/ImageObjectFactory.ts';
 
 describe('ImageObjectUtils', () => {
     // Базовые тесты для каждой функции

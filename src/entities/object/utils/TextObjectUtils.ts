@@ -1,23 +1,11 @@
 import type { TextObject } from '../types/ObjectTypes.ts';
-
-function copyStyle(style: TextObject['style']) {
-    if (!style) return style;
-    return {
-        ...style,
-        shadow: style.shadow ? { ...style.shadow } : undefined,
-    };
-}
-
-function copyTransform(transform: TextObject['transform']) {
-    if (!transform) return transform;
-    return { ...transform };
-}
+import { cloneStyle, cloneTransform } from '../factory/helpers.ts';
 
 function copyNested(object: TextObject): TextObject {
     return {
         ...object,
-        style: copyStyle(object.style),
-        transform: copyTransform(object.transform),
+        style: cloneStyle(object.style),
+        transform: cloneTransform(object.transform),
     };
 }
 
