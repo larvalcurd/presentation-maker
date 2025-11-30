@@ -1,11 +1,9 @@
 import { createSlide } from './createSlide.ts';
 import { createGradientBackground } from './backgroundFactory.ts';
 import { createSlideTransition } from './transitionFactory.ts';
-import {
-    createTextObject,
-    createImageObject,
-} from '../../object/factory/ObjectFactory.ts';
 import type { Slide } from '../types/SlideTypes.ts';
+import { createTextObject } from '../../object/factory/TextObjectFactory.ts';
+import { createImageObject } from '../../object/factory/ImageObjectFactory.ts';
 
 export function createMinimalSlide(overrides?: Partial<Slide>) {
     return createSlide(overrides);
