@@ -1,4 +1,3 @@
-// typescript
 export type BaseObject = {
     id: string;
     x: number;

@@ -14,6 +14,7 @@ import {
 } from './defaults.ts';
 
 // ----- Style -----
+
 export function cloneStyle(style?: ObjectStyle): ObjectStyle | undefined {
     if (!style) return undefined;
     return {
@@ -27,15 +28,15 @@ export function mergeStyleWithDefaults(
 ): ObjectStyle {
     const mergedShadow =
         style?.shadow !== undefined
-            ? { ...(DEFAULT_STYLE.shadow ?? {}), ...style.shadow }
+            ? { ...(DEFAULT_STYLE.shadow ?? {}), ...style.shadow } // если есть shadow в style, мерджим его с дефолтом
             : DEFAULT_STYLE.shadow
-              ? { ...DEFAULT_STYLE.shadow }
-              : undefined;
+              ? { ...DEFAULT_STYLE.shadow } // если style.shadow нет, но дефолт есть – копируем дефолт
+              : undefined; // если нет ни того, ни другого – undefined
 
     return {
-        ...DEFAULT_STYLE,
-        ...(style ?? {}),
-        shadow: mergedShadow,
+        ...DEFAULT_STYLE, // сначала берем все дефолты
+        ...(style ?? {}), // потом перезаписываем их тем, что пришло от пользователя
+        shadow: mergedShadow, // отдельно ставим уже замерженный shadow
     };
 }
 
@@ -164,7 +165,6 @@ export function applyPatchBase(
     };
 }
 
-// Overloads for type safety
 export function applyPatch(
     original: ImageObject,
     patch: Partial<ImageObject>
@@ -182,7 +182,6 @@ export function applyPatch(
     original: BaseObject | TextObject | ImageObject,
     patch: Partial<BaseObject> | Partial<TextObject> | Partial<ImageObject>
 ): BaseObject | TextObject | ImageObject {
-    // Slide objects (image / text) can reuse base logic first
     if ('type' in original && original.type === 'image') {
         const orig = original as ImageObject;
         const p = patch as Partial<ImageObject>;
