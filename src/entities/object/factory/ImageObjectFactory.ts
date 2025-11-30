@@ -43,7 +43,6 @@ export function createMinimalImage(overrides?: Partial<ImageObject>) {
     });
 }
 
-// typescript
 export function createMaximalImage(overrides?: Partial<ImageObject>) {
     const maximalFilters = {
         brightness: 1.2,
@@ -86,3 +85,54 @@ export function createMaximalImage(overrides?: Partial<ImageObject>) {
         filters: mergedFilters,
     });
 }
+/*
+┌─────────────────────────────┐
+│ 1. Максимальные дефолты     │
+│                             │
+│ style: {...}                │
+│ transform: {...}            │
+│ filters: maximalFilters     │
+│ crop, mask, rotationOrigin  │
+│ x, y, width, height, src    │
+│ locked, visible             │
+└─────────────┬───────────────┘
+              │
+              ▼
+┌──────────────────────────────┐
+│ 2. Пользовательские overrides│
+│  - Любые поля ImageObject    │
+│  - filters (особый случай)   │
+└─────────────┬────────────────┘
+              │
+              │ merge filters:
+              │ mergedFilters = { ...maximalFilters, ...overrides.filters }
+              ▼
+┌─────────────────────────────┐
+│ 3. Вход в createImageObject │
+│  - createBaseObject(params) │
+│  - создаётся original       │
+│    ImageObject с дефолтами  │
+└─────────────┬───────────────┘
+              │
+              ▼
+┌─────────────────────────────┐
+│ 4. applyPatch               │
+│  - Накладывает все overrides│
+│  - Обрабатывает style,      │
+│    transform, crop,         │
+│    filters, mask            │
+│  - mergedFilters заменяет   │
+│    filters                  │
+└─────────────┬───────────────┘
+              │
+              ▼
+┌─────────────────────────────┐
+│ 5. Финальный ImageObject    │
+│  - Все поля есть            │
+│  - Максимальные дефолты     │
+│    сохранены                │
+│  - Пользовательские значения│ 
+│    применены                │
+│  - filters = mergedFilters  │
+└─────────────────────────────┘
+*/
