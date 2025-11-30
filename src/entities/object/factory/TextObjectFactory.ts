@@ -1,4 +1,3 @@
-// typescript
 import type { BaseObject, TextObject } from '../types/ObjectTypes.ts';
 import { createBaseObject } from './BaseObjectFactory.ts';
 import { applyPatch } from './helpers.ts';
@@ -79,7 +78,7 @@ export function createMaximalText(overrides?: Partial<TextObject>) {
 
     // pass through other overrides but avoid letting applyPatch treat `style` as a patch
     const rest = { ...(overrides ?? {}) } as Partial<TextObject>;
-    delete rest.style;
+    delete rest.style; // it is already included in finalStyle
 
     return createTextObject({
         x: 10,
@@ -102,3 +101,51 @@ export function createMaximalText(overrides?: Partial<TextObject>) {
         ...rest,
     });
 }
+/*Создание TextObject с дефолтами и пользовательскими изменениями
+
+   Пользователь вызывает createTextObject(params)
+        │
+        │  - params могут содержать частичные поля TextObject
+        ▼
+[User overrides / params]
+        │
+        ▼
+   createBaseObject(params)
+        │
+        │  - Создаёт BaseObject с дефолтами (x, y, width, height, style, transform)
+        │  - Генерирует id, если его нет
+        ▼
+   Base Object с дефолтами
+        │
+        ▼
+   Создаём "original" TextObject
+        │
+        │  - type: 'text'
+        │  - дефолтный content, fontFamily, fontSize, color и др.
+        ▼
+   Original TextObject (с дефолтами)
+        │
+        ▼
+┌─────────────────────────────────────────────┐
+│   Подготовка пользовательских изменений     │
+│                                             │
+│ const rest = {...overrides};                │
+│ delete rest.style;                          │
+└─────────────────────────────────────────────┘
+        │
+        │  - Мы берём все поля, кроме style
+        │  - Нужно, чтобы applyPatch не обрабатывал style как патч
+        ▼
+   Применяем applyPatch(original, rest)
+        │
+        │  - Все поля из rest накладываются на original
+        │  - style уже не трогаем, т.к. он был объединён заранее в finalStyle
+        ▼
+   Финальный TextObject
+        │
+        │  - С дефолтами
+        │  - С пользовательскими изменениями
+        │  - С корректным style (merged)
+        ▼
+   Возвращается пользователю
+*/
