@@ -1,6 +1,3 @@
-// typescript
-// file: `src/entities/object/factory/TextObjectFactory.ts`
-
 import type {
     BaseObject,
     ObjectStyle,

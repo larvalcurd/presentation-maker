@@ -1,4 +1,3 @@
-// typescript
 import { describe, it, expect, vi } from 'vitest';
 
 // Mock nanoid before importing the factory to ensure deterministic id generation
