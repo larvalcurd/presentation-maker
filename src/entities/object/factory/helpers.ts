@@ -1,3 +1,6 @@
+// typescript
+// File: `src/entities/object/factory/helpers.ts`
+
 import type {
     BaseObject,
     SlideObject,
@@ -17,9 +20,20 @@ import {
     DEFAULT_CROP,
 } from './defaults.ts';
 
-// Generic helpers
+// --- Tiny generic helpers ---------------------------------------------------
+function hasOwnProp<T extends object, K extends PropertyKey>(
+    obj: T,
+    prop: K
+): obj is T & Record<K, unknown> {
+    return Object.prototype.hasOwnProperty.call(obj, prop);
+}
+
+function shallowClone<T extends object | undefined>(v: T): T | undefined {
+    return v ? ({ ...v } as T) : undefined;
+}
+
 function mergeWithDefaults<T>(defaults: T, partial?: Partial<T>): T {
-    return { ...defaults, ...(partial ?? {}) };
+    return { ...defaults, ...(partial ?? {}) } as T;
 }
 
 function mergeWithDefaultsOptional<T>(
@@ -27,10 +41,37 @@ function mergeWithDefaultsOptional<T>(
     partial?: Partial<T>
 ): T | undefined {
     if (partial === undefined) return undefined;
-    return { ...defaults, ...partial };
+    return mergeWithDefaults(defaults, partial);
 }
 
-// ----- Style -----
+function assignIfHasOwn<T, K extends keyof T>(
+    target: T,
+    source: Partial<T>,
+    key: K
+): void {
+    if (hasOwnProp(source as object, key as unknown as PropertyKey)) {
+        // safe typed assignment via indexed access
+        (target as T)[key] = source[key] as T[typeof key];
+    }
+}
+
+// Unified nested-merge semantics used by tests: patch === undefined => explicit removal
+function mergeNestedWithPatch<T extends object>(
+    original: T | undefined,
+    patch: Partial<T> | undefined,
+    defaults: T
+): T | undefined {
+    if (patch === undefined) return undefined;
+    if (original === undefined)
+        return { ...defaults, ...(patch as Partial<T>) } as T;
+    return {
+        ...defaults,
+        ...(original as Partial<T>),
+        ...(patch as Partial<T>),
+    } as T;
+}
+
+// --- Style helpers ---------------------------------------------------------
 export function cloneStyle(style?: ObjectStyle): ObjectStyle | undefined {
     if (!style) return undefined;
     return {
@@ -57,12 +98,11 @@ export function mergeStyleWithDefaults(
     };
 }
 
-// ----- Transform -----
+// --- Transform helpers -----------------------------------------------------
 export function cloneTransform(
     transform?: ObjectTransform
 ): ObjectTransform | undefined {
-    if (!transform) return undefined;
-    return { ...transform };
+    return shallowClone(transform);
 }
 
 export function mergeTransformWithDefaults(
@@ -71,10 +111,9 @@ export function mergeTransformWithDefaults(
     return mergeWithDefaults(DEFAULT_TRANSFORM, transform);
 }
 
-// ----- Image filters -----
+// --- Image filters helpers -------------------------------------------------
 export function cloneFilters(filters?: ImageFilters): ImageFilters | undefined {
-    if (!filters) return undefined;
-    return { ...filters };
+    return shallowClone(filters);
 }
 
 export function mergeFiltersWithDefaults(
@@ -83,28 +122,25 @@ export function mergeFiltersWithDefaults(
     return mergeWithDefaultsOptional(DEFAULT_FILTERS, filters);
 }
 
-// file: `src/entities/object/factory/helpers.ts`
+/*
+ Expected semantics:
+ - patch === undefined -> explicit removal (return undefined)
+ - original === undefined & patch provided -> return shallow copy of patch (do NOT apply DEFAULT_FILTERS)
+ - otherwise merge patch into original preserving other original fields
+*/
 export function mergePartialFiltersSafe(
     original?: ImageFilters,
     patch?: Partial<ImageFilters> | undefined
 ): ImageFilters | undefined {
-    // patch === undefined => explicit removal
     if (patch === undefined) return undefined;
-
-    // If there was no original filters object, do not apply DEFAULT_FILTERS;
-    // return a shallow copy of the provided partial (tests expect this).
-    if (original === undefined) {
+    if (original === undefined)
         return { ...(patch as ImageFilters) } as ImageFilters;
-    }
-
-    // Merge patch into original (preserve other original fields).
     return { ...original, ...patch } as ImageFilters;
 }
 
-// ----- Crop -----
+// --- Crop helpers ----------------------------------------------------------
 export function cloneCrop(crop?: ImageCrop): ImageCrop | undefined {
-    if (!crop) return undefined;
-    return { ...crop };
+    return shallowClone(crop);
 }
 
 export function mergeCropWithDefaults(
@@ -113,7 +149,7 @@ export function mergeCropWithDefaults(
     return mergeWithDefaultsOptional(DEFAULT_CROP, crop);
 }
 
-// ----- Mask -----
+// --- Mask helpers ----------------------------------------------------------
 export function cloneMask(mask?: ImageMask): ImageMask | undefined {
     if (!mask) return undefined;
     return {
@@ -122,7 +158,7 @@ export function cloneMask(mask?: ImageMask): ImageMask | undefined {
     };
 }
 
-// ----- Deep clone base (preserve concrete type) -----
+// --- Deep clone base preserving concrete type ------------------------------
 export function deepCloneNestedBase<T extends BaseObject>(base: T): T {
     const baseClone = {
         ...base,
@@ -144,52 +180,14 @@ export function deepCloneNestedBase<T extends BaseObject>(base: T): T {
     return baseClone;
 }
 
-function hasOwnProp<T extends object, K extends PropertyKey>(
-    obj: T,
-    prop: K
-): obj is T & Record<K, unknown> {
-    return Object.prototype.hasOwnProperty.call(obj, prop);
-}
-
-function assignIfHasOwn<T, K extends keyof T>(
-    target: T,
-    source: Partial<T>,
-    key: K
-): void {
-    if (Object.prototype.hasOwnProperty.call(source, key)) {
-        (target as unknown as Record<K, T[K]>)[key] = (
-            source as Record<K, T[K]>
-        )[key];
-    }
-}
-
-// Unified merge function for nested objects when patch explicitly provided
-function mergeNestedWithPatch<T>(
-    original: T | undefined,
-    patch: Partial<T> | undefined,
-    defaults: T
-): T | undefined {
-    // patch === undefined => explicit removal
-    if (patch === undefined) return undefined;
-
-    if (original === undefined) {
-        return { ...defaults, ...(patch as Partial<T>) } as T;
-    }
-
-    return {
-        ...defaults,
-        ...(original as Partial<T>),
-        ...(patch as Partial<T>),
-    } as T;
-}
-
+// --- applyPatch helpers ----------------------------------------------------
 export function applyPatchBase(
     original: BaseObject,
     patch: Partial<BaseObject>
 ): BaseObject {
     const result: BaseObject = { ...original };
 
-    // Handle style
+    // style (special nested merge semantics)
     if (hasOwnProp(patch, 'style')) {
         result.style = mergeNestedWithPatch(
             original.style,
@@ -200,7 +198,7 @@ export function applyPatchBase(
         result.style = cloneStyle(original.style);
     }
 
-    // Handle transform
+    // transform
     if (hasOwnProp(patch, 'transform')) {
         result.transform = mergeNestedWithPatch(
             original.transform,
@@ -211,7 +209,7 @@ export function applyPatchBase(
         result.transform = cloneTransform(original.transform);
     }
 
-    // Handle scalar fields
+    // scalar fields
     const scalarFields: (keyof BaseObject)[] = [
         'id',
         'x',
@@ -222,9 +220,7 @@ export function applyPatchBase(
         'locked',
         'visible',
     ];
-    scalarFields.forEach((field) => {
-        assignIfHasOwn(result, patch, field);
-    });
+    scalarFields.forEach((field) => assignIfHasOwn(result, patch, field));
 
     return result;
 }
@@ -246,7 +242,6 @@ export function applyPatch(
     original: BaseObject | TextObject | ImageObject,
     patch: Partial<BaseObject> | Partial<TextObject> | Partial<ImageObject>
 ): BaseObject | TextObject | ImageObject {
-    // Start with applyPatchBase for common fields
     const baseResult = applyPatchBase(original, patch as Partial<BaseObject>);
 
     if ('type' in original && original.type === 'image') {
@@ -254,24 +249,22 @@ export function applyPatch(
         const p = patch as Partial<ImageObject>;
         const result: ImageObject = { ...(baseResult as ImageObject) };
 
-        // Handle image-specific scalar fields
         const imageFields: (keyof ImageObject)[] = [
             'src',
             'preserveAspect',
             'fit',
             'rotationOrigin',
         ];
-        imageFields.forEach((field) => assignIfHasOwn(result, p, field));
+        imageFields.forEach((f) => assignIfHasOwn(result, p, f));
 
-        // Handle crop
         if (hasOwnProp(p, 'crop')) {
             result.crop = mergeNestedWithPatch(orig.crop, p.crop, DEFAULT_CROP);
         } else if (orig.crop) {
             result.crop = cloneCrop(orig.crop);
         }
 
-        // Handle filters
         if (hasOwnProp(p, 'filters')) {
+            // keep tests' expected semantics: when patch provided, merge with defaults/original as defined
             result.filters = mergeNestedWithPatch(
                 orig.filters,
                 p.filters,
@@ -281,7 +274,6 @@ export function applyPatch(
             result.filters = cloneFilters(orig.filters);
         }
 
-        // Handle mask
         if (hasOwnProp(p, 'mask')) {
             result.mask = p.mask === undefined ? undefined : cloneMask(p.mask);
         } else if (orig.mask) {
@@ -295,7 +287,6 @@ export function applyPatch(
         const p = patch as Partial<TextObject>;
         const result: TextObject = { ...(baseResult as TextObject) };
 
-        // Handle text-specific fields
         const textFields: (keyof TextObject)[] = [
             'content',
             'fontFamily',
@@ -307,7 +298,7 @@ export function applyPatch(
             'lineHeight',
             'letterSpacing',
         ];
-        textFields.forEach((field) => assignIfHasOwn(result, p, field));
+        textFields.forEach((f) => assignIfHasOwn(result, p, f));
 
         return result;
     }
