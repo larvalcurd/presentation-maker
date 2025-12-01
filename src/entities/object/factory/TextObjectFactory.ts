@@ -6,24 +6,24 @@ import type {
 import { createBaseObject } from './BaseObjectFactory.ts';
 import { applyPatch, mergeStyleWithDefaults } from './helpers.ts';
 
-export function createTextObject(
-    params: {
-        x: number;
-        y: number;
-        width: number;
-        height: number;
-        content: string;
-        fontFamily?: string;
-        fontSize?: number;
-        color?: string;
-        fontWeight?: number | 'normal' | 'bold';
-        fontStyle?: 'normal' | 'italic';
-        textAlign?: 'left' | 'center' | 'right';
-        lineHeight?: number;
-        letterSpacing?: number;
-        style?: Partial<ObjectStyle>;
-    } & Partial<BaseObject>
-): TextObject {
+type CreateTextObjectParams = Partial<BaseObject> & {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+    content: string;
+    fontFamily?: string;
+    fontSize?: number;
+    color?: string;
+    fontWeight?: number | 'normal' | 'bold';
+    fontStyle?: 'normal' | 'italic';
+    textAlign?: 'left' | 'center' | 'right';
+    lineHeight?: number;
+    letterSpacing?: number;
+    style?: Partial<ObjectStyle>;
+};
+
+export function createTextObject(params: CreateTextObjectParams): TextObject {
     const base = createBaseObject(params);
     const original: TextObject = {
         ...base,
@@ -38,6 +38,7 @@ export function createTextObject(
         lineHeight: 1.2,
         letterSpacing: 0,
     };
+    // defaults are in `original`, user-provided fields in `params` are applied last
     return applyPatch(original, params as Partial<TextObject>);
 }
 
@@ -79,6 +80,7 @@ export function createMaximalText(overrides?: Partial<TextObject>) {
         shadow: mergedShadow,
     });
 
+    // avoid double-merging style inside applyPatch: remove it from rest
     const rest = { ...(overrides ?? {}) } as Partial<TextObject>;
     delete rest.style;
 
