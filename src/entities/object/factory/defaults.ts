@@ -8,7 +8,7 @@ import type {
 
 const DEFAULT_STYLE: ObjectStyle = {
     borderRadius: 0,
-    borderColor: '#00000000',
+    borderColor: '#000000',
     borderWidth: 0,
     shadow: undefined,
     backgroundColor: 'transparent',

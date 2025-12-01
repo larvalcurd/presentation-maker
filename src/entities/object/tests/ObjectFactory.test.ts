@@ -76,7 +76,7 @@ describe('ObjectFactory', () => {
 
             expect(text.style).toEqual({
                 borderRadius: 10,
-                borderColor: '#00000000',
+                borderColor: '#000000',
                 borderWidth: 0,
                 shadow: undefined,
                 backgroundColor: '#F0F0F0',
@@ -119,7 +119,7 @@ describe('ObjectFactory', () => {
             expect(updatedText.style).toEqual({
                 borderRadius: 10,
                 borderWidth: 0, // DEFAULT_STYLE.borderWidth
-                borderColor: '#00000000', // DEFAULT_STYLE.borderColor
+                borderColor: '#000000', // DEFAULT_STYLE.borderColor
                 shadow: undefined,
                 backgroundColor: '#F0F0F0',
             });
