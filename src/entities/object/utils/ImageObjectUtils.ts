@@ -1,5 +1,3 @@
-// typescript
-// file: `src/entities/object/utils/ImageObjectUtils.ts`
 import type { ImageObject } from '../types/ObjectTypes.ts';
 import {
     deepCloneNestedBase,
