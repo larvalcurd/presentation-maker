@@ -1,7 +1,10 @@
-import type { BaseObject, TextObject } from '../types/ObjectTypes.ts';
+import type {
+    BaseObject,
+    ObjectStyle,
+    TextObject,
+} from '../types/ObjectTypes.ts';
 import { createBaseObject } from './BaseObjectFactory.ts';
-import { applyPatch } from './helpers.ts';
-import { DEFAULT_STYLE } from './defaults.ts';
+import { applyPatch, mergeStyleWithDefaults } from './helpers.ts';
 
 export function createTextObject(
     params: {
@@ -18,6 +21,7 @@ export function createTextObject(
         textAlign?: 'left' | 'center' | 'right';
         lineHeight?: number;
         letterSpacing?: number;
+        style?: Partial<ObjectStyle>;
     } & Partial<BaseObject>
 ): TextObject {
     const base = createBaseObject(params);
@@ -57,10 +61,10 @@ export function createMaximalText(overrides?: Partial<TextObject>) {
         backgroundColor: '#ffff00',
     };
 
-    // merge incoming style overrides over the maximal style (preserve maximal-only fields)
     const incomingStyle = overrides?.style;
+
     const mergedShadow =
-        incomingStyle && incomingStyle.shadow
+        incomingStyle?.shadow !== undefined
             ? {
                   ...(maximalStyle.shadow ?? {}),
                   ...(incomingStyle.shadow ?? {}),
@@ -69,16 +73,14 @@ export function createMaximalText(overrides?: Partial<TextObject>) {
               ? { ...maximalStyle.shadow }
               : undefined;
 
-    const finalStyle = {
-        ...DEFAULT_STYLE,
+    const finalStyle = mergeStyleWithDefaults({
         ...maximalStyle,
         ...(incomingStyle ?? {}),
         shadow: mergedShadow,
-    };
+    });
 
-    // pass through other overrides but avoid letting applyPatch treat `style` as a patch
     const rest = { ...(overrides ?? {}) } as Partial<TextObject>;
-    delete rest.style; // it is already included in finalStyle
+    delete rest.style;
 
     return createTextObject({
         x: 10,

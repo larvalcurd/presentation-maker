@@ -1,4 +1,10 @@
-import type { BaseObject, ImageObject } from '../types/ObjectTypes.ts';
+import type {
+    BaseObject,
+    ImageCrop,
+    ImageFilters,
+    ImageMask,
+    ImageObject,
+} from '../types/ObjectTypes.ts';
 import { createBaseObject } from './BaseObjectFactory.ts';
 import { applyPatch } from './helpers.ts';
 
@@ -11,9 +17,9 @@ export function createImageObject(
         src: string;
         preserveAspect?: boolean;
         fit?: 'contain' | 'cover' | 'fill' | 'tile';
-        crop?: Partial<ImageObject['crop']>;
-        filters?: Partial<ImageObject['filters']>;
-        mask?: ImageObject['mask'];
+        crop?: Partial<ImageCrop>;
+        filters?: Partial<ImageFilters>;
+        mask?: ImageMask;
         rotationOrigin?: ImageObject['rotationOrigin'];
     } & Partial<BaseObject>
 ): ImageObject {
@@ -21,7 +27,7 @@ export function createImageObject(
     const original: ImageObject = {
         ...base,
         type: 'image',
-        src: '',
+        src: params.src,
         preserveAspect: true,
         fit: 'contain',
         crop: undefined,
@@ -44,7 +50,7 @@ export function createMinimalImage(overrides?: Partial<ImageObject>) {
 }
 
 export function createMaximalImage(overrides?: Partial<ImageObject>) {
-    const maximalFilters = {
+    const maximalFilters: ImageFilters = {
         brightness: 1.2,
         contrast: 1.5,
         blur: 2,
@@ -52,10 +58,8 @@ export function createMaximalImage(overrides?: Partial<ImageObject>) {
         grayscale: 0.5,
     };
 
-    // Compute filters: if overrides provide filters, merge them into maximalFilters;
-    // otherwise use maximalFilters.
-    const mergedFilters = overrides?.filters
-        ? { ...maximalFilters, ...overrides.filters }
+    const mergedFilters: ImageFilters = overrides?.filters
+        ? { ...maximalFilters, ...(overrides.filters as ImageFilters) }
         : maximalFilters;
 
     return createImageObject({
@@ -80,7 +84,7 @@ export function createMaximalImage(overrides?: Partial<ImageObject>) {
         },
         transform: { rotate: 45, scaleX: 0.8, scaleY: 0.8, opacity: 0.9 },
 
-        // allow other overrides to replace defaults, but ensure filters uses the merged value
+        // preserve other overrides, but ensure filters uses the merged value
         ...overrides,
         filters: mergedFilters,
     });
