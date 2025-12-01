@@ -42,6 +42,17 @@ export function createImageObject(
         rotationOrigin: params.rotationOrigin ?? 'center',
     };
 
+    // If nested partials were provided in params (style/transform),
+    // apply them via applyPatch so merging semantics are consistent
+    // with the rest of the codebase (merge with defaults/original).
+    if (params.style !== undefined || params.transform !== undefined) {
+        const patched = applyPatch(original, {
+            style: params.style,
+            transform: params.transform,
+        } as Partial<ImageObject>);
+        return patched as ImageObject;
+    }
+
     return original;
 }
 
