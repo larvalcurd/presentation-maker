@@ -1,7 +1,11 @@
+// typescript
+// file: `src/entities/object/factory/TextObjectFactory.ts`
+
 import type {
     BaseObject,
     ObjectStyle,
     TextObject,
+    ObjectTransform,
 } from '../types/ObjectTypes.ts';
 import { createBaseObject } from './BaseObjectFactory.ts';
 import { applyPatch } from './helpers.ts';
@@ -21,6 +25,7 @@ type CreateTextObjectParams = Partial<BaseObject> & {
     lineHeight?: number;
     letterSpacing?: number;
     style?: Partial<ObjectStyle>;
+    transform?: Partial<ObjectTransform>;
 };
 
 export function createTextObject(params: CreateTextObjectParams): TextObject {
@@ -39,6 +44,17 @@ export function createTextObject(params: CreateTextObjectParams): TextObject {
         lineHeight: params.lineHeight ?? 1.2,
         letterSpacing: params.letterSpacing ?? 0,
     };
+
+    // If nested partials were provided in params (style/transform),
+    // apply them explicitly via applyPatch so merging semantics are consistent
+    // (merge with defaults/original occurs in helpers.applyPatch).
+    if (params.style !== undefined || params.transform !== undefined) {
+        const patched = applyPatch(original, {
+            style: params.style,
+            transform: params.transform,
+        } as Partial<TextObject>);
+        return patched as TextObject;
+    }
 
     return original;
 }
