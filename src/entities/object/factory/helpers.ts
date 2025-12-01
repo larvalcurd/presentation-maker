@@ -1,4 +1,3 @@
-// typescript
 import type {
     BaseObject,
     SlideObject,
@@ -139,11 +138,7 @@ function assignIfHasOwn<T, K extends keyof T>(
     source: Partial<T>,
     key: K
 ): void {
-    // Only assign when source explicitly has property and value is not `undefined`.
-    if (
-        Object.prototype.hasOwnProperty.call(source, key) &&
-        (source as Record<K, unknown>)[key] !== undefined
-    ) {
+    if (Object.prototype.hasOwnProperty.call(source, key)) {
         (target as unknown as Record<K, T[K]>)[key] = (
             source as Record<K, T[K]>
         )[key];
@@ -152,17 +147,22 @@ function assignIfHasOwn<T, K extends keyof T>(
 
 // Unified merge function for nested objects when patch explicitly provided
 function mergeNestedWithPatch<T>(
-    _original: T | undefined,
+    original: T | undefined,
     patch: Partial<T> | undefined,
     defaults: T
 ): T | undefined {
     // patch === undefined => explicit removal
     if (patch === undefined) return undefined;
 
-    // When a patch object is provided, merge defaults with patch only
-    // (do not fold original into the result). This matches tests expecting
-    // DEFAULT_* fields to be used unless overridden by patch.
-    return { ...defaults, ...(patch as Partial<T>) } as T;
+    if (original === undefined) {
+        return { ...defaults, ...(patch as Partial<T>) } as T;
+    }
+
+    return {
+        ...defaults,
+        ...(original as Partial<T>),
+        ...(patch as Partial<T>),
+    } as T;
 }
 
 export function applyPatchBase(
