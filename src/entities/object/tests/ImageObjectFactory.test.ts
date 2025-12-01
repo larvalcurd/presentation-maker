@@ -1,4 +1,3 @@
-// typescript
 import { describe, it, expect, vi } from 'vitest';
 import type { ObjectStyle, ObjectTransform } from '../types/ObjectTypes.ts';
 
