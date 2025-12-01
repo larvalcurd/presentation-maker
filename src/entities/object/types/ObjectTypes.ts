@@ -5,42 +5,18 @@ export type BaseObject = {
     zIndex: number;
     width: number;
     height: number;
-
     locked?: boolean;
     visible?: boolean;
     transform?: ObjectTransform;
     style?: ObjectStyle;
 };
 
-export type ObjectTransform = {
-    rotate?: number;
-    scaleX?: number;
-    scaleY?: number;
-    opacity?: number;
-};
-
-export type ObjectStyle = {
-    borderRadius?: number;
-    borderColor?: string;
-    borderWidth?: number;
-    shadow?: {
-        offsetX?: number;
-        offsetY?: number;
-        blur?: number;
-        color?: string;
-    };
-
-    backgroundColor?: string;
-};
-
 export type TextObject = BaseObject & {
     type: 'text';
     content: string;
-
     fontFamily: string;
     fontSize: number;
     color: string;
-
     fontWeight?: number | 'normal' | 'bold';
     fontStyle?: 'normal' | 'italic';
     textAlign?: 'left' | 'center' | 'right';
@@ -51,31 +27,11 @@ export type TextObject = BaseObject & {
 export type ImageObject = BaseObject & {
     type: 'image';
     src: string;
-
     preserveAspect?: boolean;
     fit?: 'contain' | 'cover' | 'fill' | 'tile';
-
-    crop?: {
-        x?: number;
-        y?: number;
-        width?: number;
-        height?: number;
-    };
-
-    filters?: {
-        brightness?: number;
-        contrast?: number;
-        saturation?: number;
-        blur?: number;
-        grayscale?: number;
-    };
-
-    mask?: {
-        shape: 'circle' | 'rounded' | 'polygon' | 'none';
-        radius?: number;
-        points?: { x: number; y: number }[];
-    };
-
+    crop?: ImageCrop;
+    filters?: ImageFilters;
+    mask?: ImageMask;
     rotationOrigin?:
         | 'center'
         | 'top-left'
@@ -90,4 +46,52 @@ export type SlideObject = TextObject | ImageObject;
 export type ObjectSelection = {
     slideId: string;
     objectIds: string[];
+};
+
+export type ObjectShadow = {
+    offsetX?: number;
+    offsetY?: number;
+    blur?: number;
+    color?: string;
+};
+
+export type ImageCrop = {
+    x?: number;
+    y?: number;
+    width?: number;
+    height?: number;
+};
+
+export type ImageFilters = {
+    brightness?: number;
+    contrast?: number;
+    saturation?: number;
+    blur?: number;
+    grayscale?: number;
+};
+
+export type MaskPoint = {
+    x: number;
+    y: number;
+};
+
+export type ImageMask = {
+    shape: 'circle' | 'rounded' | 'polygon' | 'none';
+    radius?: number;
+    points?: MaskPoint[];
+};
+
+export type ObjectTransform = {
+    rotate?: number;
+    scaleX?: number;
+    scaleY?: number;
+    opacity?: number;
+};
+
+export type ObjectStyle = {
+    borderRadius?: number;
+    borderColor?: string;
+    borderWidth?: number;
+    shadow?: ObjectShadow;
+    backgroundColor?: string;
 };
