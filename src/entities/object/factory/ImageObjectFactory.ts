@@ -8,20 +8,22 @@ import type {
 import { createBaseObject } from './BaseObjectFactory.ts';
 import { applyPatch } from './helpers.ts';
 
+type CreateImageObjectParams = Partial<BaseObject> & {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+    src: string;
+    preserveAspect?: boolean;
+    fit?: 'contain' | 'cover' | 'fill' | 'tile';
+    crop?: Partial<ImageCrop>;
+    filters?: Partial<ImageFilters>;
+    mask?: ImageMask;
+    rotationOrigin?: ImageObject['rotationOrigin'];
+};
+
 export function createImageObject(
-    params: {
-        x: number;
-        y: number;
-        width: number;
-        height: number;
-        src: string;
-        preserveAspect?: boolean;
-        fit?: 'contain' | 'cover' | 'fill' | 'tile';
-        crop?: Partial<ImageCrop>;
-        filters?: Partial<ImageFilters>;
-        mask?: ImageMask;
-        rotationOrigin?: ImageObject['rotationOrigin'];
-    } & Partial<BaseObject>
+    params: CreateImageObjectParams
 ): ImageObject {
     const base = createBaseObject(params);
     const original: ImageObject = {
@@ -35,6 +37,7 @@ export function createImageObject(
         mask: undefined,
         rotationOrigin: 'center',
     };
+    // defaults are in `original`, user-provided fields in `params` are applied last
     return applyPatch(original, params as Partial<ImageObject>);
 }
 
@@ -58,6 +61,7 @@ export function createMaximalImage(overrides?: Partial<ImageObject>) {
         grayscale: 0.5,
     };
 
+    // ensure filters is a concrete object on maximal fixtures
     const mergedFilters: ImageFilters = overrides?.filters
         ? { ...maximalFilters, ...(overrides.filters as ImageFilters) }
         : maximalFilters;
@@ -84,7 +88,7 @@ export function createMaximalImage(overrides?: Partial<ImageObject>) {
         },
         transform: { rotate: 45, scaleX: 0.8, scaleY: 0.8, opacity: 0.9 },
 
-        // preserve other overrides, but ensure filters uses the merged value
+        // defaults first (above), overrides last
         ...overrides,
         filters: mergedFilters,
     });
