@@ -1,3 +1,4 @@
+// typescript
 import type {
     BaseObject,
     SlideObject,
@@ -26,7 +27,7 @@ function mergeWithDefaultsOptional<T>(
     defaults: T,
     partial?: Partial<T>
 ): T | undefined {
-    if (!partial) return undefined;
+    if (partial === undefined) return undefined;
     return { ...defaults, ...partial };
 }
 
@@ -83,18 +84,6 @@ export function mergeFiltersWithDefaults(
     return mergeWithDefaultsOptional(DEFAULT_FILTERS, filters);
 }
 
-export function mergePartialFiltersSafe(
-    existing?: ImageFilters,
-    patch?: Partial<ImageFilters>
-): ImageFilters | undefined {
-    if (!patch) {
-        return cloneFilters(existing);
-    }
-    return existing
-        ? { ...existing, ...(patch as ImageFilters) }
-        : { ...(patch as ImageFilters) };
-}
-
 // ----- Crop -----
 export function cloneCrop(crop?: ImageCrop): ImageCrop | undefined {
     if (!crop) return undefined;
@@ -145,45 +134,81 @@ function hasOwnProp<T extends object, K extends PropertyKey>(
     return Object.prototype.hasOwnProperty.call(obj, prop);
 }
 
+function assignIfHasOwn<T, K extends keyof T>(
+    target: T,
+    source: Partial<T>,
+    key: K
+): void {
+    // Only assign when source explicitly has property and value is not `undefined`.
+    if (
+        Object.prototype.hasOwnProperty.call(source, key) &&
+        (source as Record<K, unknown>)[key] !== undefined
+    ) {
+        (target as unknown as Record<K, T[K]>)[key] = (
+            source as Record<K, T[K]>
+        )[key];
+    }
+}
+
+// Unified merge function for nested objects when patch explicitly provided
+function mergeNestedWithPatch<T>(
+    _original: T | undefined,
+    patch: Partial<T> | undefined,
+    defaults: T
+): T | undefined {
+    // patch === undefined => explicit removal
+    if (patch === undefined) return undefined;
+
+    // When a patch object is provided, merge defaults with patch only
+    // (do not fold original into the result). This matches tests expecting
+    // DEFAULT_* fields to be used unless overridden by patch.
+    return { ...defaults, ...(patch as Partial<T>) } as T;
+}
+
 export function applyPatchBase(
     original: BaseObject,
     patch: Partial<BaseObject>
 ): BaseObject {
-    const style = hasOwnProp(patch, 'style')
-        ? patch.style
-            ? mergeStyleWithDefaults(patch.style)
-            : undefined
-        : cloneStyle(original.style);
+    const result: BaseObject = { ...original };
 
-    const transform = hasOwnProp(patch, 'transform')
-        ? patch.transform
-            ? mergeTransformWithDefaults(patch.transform)
-            : undefined
-        : cloneTransform(original.transform);
+    // Handle style
+    if (hasOwnProp(patch, 'style')) {
+        result.style = mergeNestedWithPatch(
+            original.style,
+            patch.style,
+            DEFAULT_STYLE
+        );
+    } else if (original.style) {
+        result.style = cloneStyle(original.style);
+    }
 
-    return {
-        ...original,
-        id: hasOwnProp(patch, 'id') ? (patch.id ?? original.id) : original.id,
-        x: hasOwnProp(patch, 'x') ? (patch.x as number) : original.x,
-        y: hasOwnProp(patch, 'y') ? (patch.y as number) : original.y,
-        zIndex: hasOwnProp(patch, 'zIndex')
-            ? (patch.zIndex as number)
-            : original.zIndex,
-        width: hasOwnProp(patch, 'width')
-            ? (patch.width as number)
-            : original.width,
-        height: hasOwnProp(patch, 'height')
-            ? (patch.height as number)
-            : original.height,
-        locked: hasOwnProp(patch, 'locked')
-            ? (patch.locked as boolean)
-            : original.locked,
-        visible: hasOwnProp(patch, 'visible')
-            ? (patch.visible as boolean)
-            : original.visible,
-        style,
-        transform,
-    };
+    // Handle transform
+    if (hasOwnProp(patch, 'transform')) {
+        result.transform = mergeNestedWithPatch(
+            original.transform,
+            patch.transform,
+            DEFAULT_TRANSFORM
+        );
+    } else if (original.transform) {
+        result.transform = cloneTransform(original.transform);
+    }
+
+    // Handle scalar fields
+    const scalarFields: (keyof BaseObject)[] = [
+        'id',
+        'x',
+        'y',
+        'zIndex',
+        'width',
+        'height',
+        'locked',
+        'visible',
+    ];
+    scalarFields.forEach((field) => {
+        assignIfHasOwn(result, patch, field);
+    });
+
+    return result;
 }
 
 export function applyPatch(
@@ -203,96 +228,71 @@ export function applyPatch(
     original: BaseObject | TextObject | ImageObject,
     patch: Partial<BaseObject> | Partial<TextObject> | Partial<ImageObject>
 ): BaseObject | TextObject | ImageObject {
+    // Start with applyPatchBase for common fields
+    const baseResult = applyPatchBase(original, patch as Partial<BaseObject>);
+
     if ('type' in original && original.type === 'image') {
         const orig = original as ImageObject;
         const p = patch as Partial<ImageObject>;
+        const result: ImageObject = { ...(baseResult as ImageObject) };
 
-        const base = applyPatchBase(orig, p);
+        // Handle image-specific scalar fields
+        const imageFields: (keyof ImageObject)[] = [
+            'src',
+            'preserveAspect',
+            'fit',
+            'rotationOrigin',
+        ];
+        imageFields.forEach((field) => assignIfHasOwn(result, p, field));
 
-        const crop = hasOwnProp(p, 'crop')
-            ? p.crop
-                ? mergeCropWithDefaults(p.crop)
-                : undefined
-            : cloneCrop(orig.crop);
+        // Handle crop
+        if (hasOwnProp(p, 'crop')) {
+            result.crop = mergeNestedWithPatch(orig.crop, p.crop, DEFAULT_CROP);
+        } else if (orig.crop) {
+            result.crop = cloneCrop(orig.crop);
+        }
 
-        const filters = hasOwnProp(p, 'filters')
-            ? p.filters
-                ? mergeFiltersWithDefaults(p.filters)
-                : undefined
-            : cloneFilters(orig.filters);
+        // Handle filters
+        if (hasOwnProp(p, 'filters')) {
+            result.filters = mergeNestedWithPatch(
+                orig.filters,
+                p.filters,
+                DEFAULT_FILTERS
+            );
+        } else if (orig.filters) {
+            result.filters = cloneFilters(orig.filters);
+        }
 
-        const mask = hasOwnProp(p, 'mask')
-            ? p.mask
-                ? cloneMask(p.mask)
-                : undefined
-            : cloneMask(orig.mask);
+        // Handle mask
+        if (hasOwnProp(p, 'mask')) {
+            result.mask = p.mask === undefined ? undefined : cloneMask(p.mask);
+        } else if (orig.mask) {
+            result.mask = cloneMask(orig.mask);
+        }
 
-        const src = hasOwnProp(p, 'src') ? (p.src as string) : orig.src;
-        const preserveAspect = hasOwnProp(p, 'preserveAspect')
-            ? p.preserveAspect
-            : orig.preserveAspect;
-        const fit = hasOwnProp(p, 'fit') ? p.fit : orig.fit;
-        const rotationOrigin = hasOwnProp(p, 'rotationOrigin')
-            ? p.rotationOrigin
-            : orig.rotationOrigin;
-
-        return {
-            ...base,
-            type: 'image',
-            src,
-            preserveAspect,
-            fit,
-            crop,
-            filters,
-            mask,
-            rotationOrigin,
-        } as ImageObject;
+        return result;
     }
 
     if ('type' in original && original.type === 'text') {
-        const orig = original as TextObject;
         const p = patch as Partial<TextObject>;
+        const result: TextObject = { ...(baseResult as TextObject) };
 
-        const base = applyPatchBase(orig, p);
+        // Handle text-specific fields
+        const textFields: (keyof TextObject)[] = [
+            'content',
+            'fontFamily',
+            'fontSize',
+            'color',
+            'fontWeight',
+            'fontStyle',
+            'textAlign',
+            'lineHeight',
+            'letterSpacing',
+        ];
+        textFields.forEach((field) => assignIfHasOwn(result, p, field));
 
-        const content = hasOwnProp(p, 'content')
-            ? (p.content as string)
-            : orig.content;
-        const fontFamily = hasOwnProp(p, 'fontFamily')
-            ? p.fontFamily
-            : orig.fontFamily;
-        const fontSize = hasOwnProp(p, 'fontSize') ? p.fontSize : orig.fontSize;
-        const color = hasOwnProp(p, 'color') ? p.color : orig.color;
-        const fontWeight = hasOwnProp(p, 'fontWeight')
-            ? p.fontWeight
-            : orig.fontWeight;
-        const fontStyle = hasOwnProp(p, 'fontStyle')
-            ? p.fontStyle
-            : orig.fontStyle;
-        const textAlign = hasOwnProp(p, 'textAlign')
-            ? p.textAlign
-            : orig.textAlign;
-        const lineHeight = hasOwnProp(p, 'lineHeight')
-            ? p.lineHeight
-            : orig.lineHeight;
-        const letterSpacing = hasOwnProp(p, 'letterSpacing')
-            ? p.letterSpacing
-            : orig.letterSpacing;
-
-        return {
-            ...base,
-            type: 'text',
-            content,
-            fontFamily,
-            fontSize,
-            color,
-            fontWeight,
-            fontStyle,
-            textAlign,
-            lineHeight,
-            letterSpacing,
-        } as TextObject;
+        return result;
     }
 
-    return applyPatchBase(original, patch as Partial<BaseObject>);
+    return baseResult;
 }

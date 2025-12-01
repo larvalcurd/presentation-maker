@@ -7,6 +7,7 @@ import type {
 } from '../types/ObjectTypes.ts';
 import { createBaseObject } from './BaseObjectFactory.ts';
 import { applyPatch } from './helpers.ts';
+import { DEFAULT_FILTERS, DEFAULT_CROP } from './defaults.ts';
 
 type CreateImageObjectParams = Partial<BaseObject> & {
     x: number;
@@ -26,30 +27,35 @@ export function createImageObject(
     params: CreateImageObjectParams
 ): ImageObject {
     const base = createBaseObject(params);
+
     const original: ImageObject = {
         ...base,
         type: 'image',
         src: params.src,
-        preserveAspect: true,
-        fit: 'contain',
-        crop: undefined,
-        filters: undefined,
-        mask: undefined,
-        rotationOrigin: 'center',
+        preserveAspect: params.preserveAspect ?? true,
+        fit: params.fit ?? 'contain',
+        crop: params.crop ? { ...DEFAULT_CROP, ...params.crop } : undefined,
+        filters: params.filters
+            ? { ...DEFAULT_FILTERS, ...params.filters }
+            : undefined,
+        mask: params.mask ? { ...params.mask } : undefined,
+        rotationOrigin: params.rotationOrigin ?? 'center',
     };
-    // defaults are in `original`, user-provided fields in `params` are applied last
-    return applyPatch(original, params as Partial<ImageObject>);
+
+    return original;
 }
 
 export function createMinimalImage(overrides?: Partial<ImageObject>) {
-    return createImageObject({
-        x: 0,
-        y: 0,
-        width: 100,
-        height: 100,
-        src: '',
-        ...overrides,
-    });
+    return applyPatch(
+        createImageObject({
+            x: 0,
+            y: 0,
+            width: 100,
+            height: 100,
+            src: '',
+        }),
+        overrides ?? {}
+    );
 }
 
 export function createMaximalImage(overrides?: Partial<ImageObject>) {
@@ -61,12 +67,7 @@ export function createMaximalImage(overrides?: Partial<ImageObject>) {
         grayscale: 0.5,
     };
 
-    // ensure filters is a concrete object on maximal fixtures
-    const mergedFilters: ImageFilters = overrides?.filters
-        ? { ...maximalFilters, ...(overrides.filters as ImageFilters) }
-        : maximalFilters;
-
-    return createImageObject({
+    const image = createImageObject({
         x: 50,
         y: 50,
         width: 400,
@@ -87,60 +88,8 @@ export function createMaximalImage(overrides?: Partial<ImageObject>) {
             backgroundColor: '#abcdef',
         },
         transform: { rotate: 45, scaleX: 0.8, scaleY: 0.8, opacity: 0.9 },
-
-        // defaults first (above), overrides last
-        ...overrides,
-        filters: mergedFilters,
+        filters: maximalFilters,
     });
+
+    return overrides ? applyPatch(image, overrides) : image;
 }
-/*
-┌─────────────────────────────┐
-│ 1. Максимальные дефолты     │
-│                             │
-│ style: {...}                │
-│ transform: {...}            │
-│ filters: maximalFilters     │
-│ crop, mask, rotationOrigin  │
-│ x, y, width, height, src    │
-│ locked, visible             │
-└─────────────┬───────────────┘
-              │
-              ▼
-┌──────────────────────────────┐
-│ 2. Пользовательские overrides│
-│  - Любые поля ImageObject    │
-│  - filters (особый случай)   │
-└─────────────┬────────────────┘
-              │
-              │ merge filters:
-              │ mergedFilters = { ...maximalFilters, ...overrides.filters }
-              ▼
-┌─────────────────────────────┐
-│ 3. Вход в createImageObject │
-│  - createBaseObject(params) │
-│  - создаётся original       │
-│    ImageObject с дефолтами  │
-└─────────────┬───────────────┘
-              │
-              ▼
-┌─────────────────────────────┐
-│ 4. applyPatch               │
-│  - Накладывает все overrides│
-│  - Обрабатывает style,      │
-│    transform, crop,         │
-│    filters, mask            │
-│  - mergedFilters заменяет   │
-│    filters                  │
-└─────────────┬───────────────┘
-              │
-              ▼
-┌─────────────────────────────┐
-│ 5. Финальный ImageObject    │
-│  - Все поля есть            │
-│  - Максимальные дефолты     │
-│    сохранены                │
-│  - Пользовательские значения│ 
-│    применены                │
-│  - filters = mergedFilters  │
-└─────────────────────────────┘
-*/
