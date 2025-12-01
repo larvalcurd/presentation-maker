@@ -15,8 +15,10 @@ function createBaseObject(params: CreateBaseObjectParams): BaseObject {
         ...DEFAULT_BASE,
         ...params,
         id: params.id ?? nanoid(),
-        style: cloneStyle(params.style ?? DEFAULT_BASE.style),
-        transform: cloneTransform(params.transform ?? DEFAULT_BASE.transform),
+        // always return cloned defaults for nested objects;
+        // do not apply/clone partial nested inputs here
+        style: cloneStyle(DEFAULT_BASE.style),
+        transform: cloneTransform(DEFAULT_BASE.transform),
     };
 }
 
