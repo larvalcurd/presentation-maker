@@ -6,20 +6,20 @@ import {
     mergeTransformWithDefaults,
 } from './helpers.ts';
 
-function createBaseObject(
-    data: Partial<BaseObject> & {
-        x: number;
-        y: number;
-        width: number;
-        height: number;
-    }
-): BaseObject {
+type CreateBaseObjectParams = Partial<BaseObject> & {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+};
+
+function createBaseObject(params: CreateBaseObjectParams): BaseObject {
     return {
         ...DEFAULT_BASE,
-        ...data,
-        id: data.id ?? nanoid(),
-        style: mergeStyleWithDefaults(data.style),
-        transform: mergeTransformWithDefaults(data.transform),
+        ...params,
+        id: params.id ?? nanoid(),
+        style: mergeStyleWithDefaults(params.style),
+        transform: mergeTransformWithDefaults(params.transform),
     };
 }
 
