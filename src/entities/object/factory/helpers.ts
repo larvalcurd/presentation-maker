@@ -1,6 +1,3 @@
-// typescript
-// File: `src/entities/object/factory/helpers.ts`
-
 import type {
     BaseObject,
     SlideObject,
