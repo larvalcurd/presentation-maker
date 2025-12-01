@@ -2,6 +2,8 @@ import type {
     BaseObject,
     ObjectStyle,
     ObjectTransform,
+    ImageFilters,
+    ImageCrop,
 } from '../types/ObjectTypes.ts';
 
 const DEFAULT_STYLE: ObjectStyle = {
@@ -19,7 +21,7 @@ const DEFAULT_TRANSFORM: ObjectTransform = {
     opacity: 1,
 };
 
-const DEFAULT_FILTERS = {
+const DEFAULT_FILTERS: ImageFilters = {
     brightness: 1,
     contrast: 1,
     saturation: 1,
@@ -27,14 +29,14 @@ const DEFAULT_FILTERS = {
     grayscale: 0,
 };
 
-const DEFAULT_CROP = {
+const DEFAULT_CROP: ImageCrop = {
     x: 0,
     y: 0,
     width: 100,
     height: 100,
 };
 
-const DEFAULT_BASE: Omit<BaseObject, 'id' | 'type'> = {
+const DEFAULT_BASE: Omit<BaseObject, 'id'> = {
     x: 0,
     y: 0,
     width: 100,

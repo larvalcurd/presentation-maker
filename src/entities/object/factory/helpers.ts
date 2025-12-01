@@ -5,6 +5,10 @@ import type {
     ObjectTransform,
     ObjectStyle,
     TextObject,
+    ObjectShadow,
+    ImageCrop,
+    ImageFilters,
+    ImageMask,
 } from '../types/ObjectTypes.ts';
 import {
     DEFAULT_STYLE,
@@ -13,8 +17,20 @@ import {
     DEFAULT_CROP,
 } from './defaults.ts';
 
-// ----- Style -----
+// Generic helpers
+function mergeWithDefaults<T>(defaults: T, partial?: Partial<T>): T {
+    return { ...defaults, ...(partial ?? {}) };
+}
 
+function mergeWithDefaultsOptional<T>(
+    defaults: T,
+    partial?: Partial<T>
+): T | undefined {
+    if (!partial) return undefined;
+    return { ...defaults, ...partial };
+}
+
+// ----- Style -----
 export function cloneStyle(style?: ObjectStyle): ObjectStyle | undefined {
     if (!style) return undefined;
     return {
@@ -26,17 +42,18 @@ export function cloneStyle(style?: ObjectStyle): ObjectStyle | undefined {
 export function mergeStyleWithDefaults(
     style?: Partial<ObjectStyle>
 ): ObjectStyle {
-    const mergedShadow =
+    const shadow =
         style?.shadow !== undefined
-            ? { ...(DEFAULT_STYLE.shadow ?? {}), ...style.shadow } // если есть shadow в style, мерджим его с дефолтом
-            : DEFAULT_STYLE.shadow
-              ? { ...DEFAULT_STYLE.shadow } // если style.shadow нет, но дефолт есть – копируем дефолт
-              : undefined; // если нет ни того, ни другого – undefined
+            ? mergeWithDefaults(
+                  DEFAULT_STYLE.shadow ?? ({} as ObjectShadow),
+                  style.shadow
+              )
+            : DEFAULT_STYLE.shadow;
 
     return {
-        ...DEFAULT_STYLE, // сначала берем все дефолты
-        ...(style ?? {}), // потом перезаписываем их тем, что пришло от пользователя
-        shadow: mergedShadow, // отдельно ставим уже замерженный shadow
+        ...DEFAULT_STYLE,
+        ...(style ?? {}),
+        shadow,
     };
 }
 
@@ -51,43 +68,35 @@ export function cloneTransform(
 export function mergeTransformWithDefaults(
     transform?: Partial<ObjectTransform>
 ): ObjectTransform {
-    return { ...DEFAULT_TRANSFORM, ...(transform ?? {}) };
+    return mergeWithDefaults(DEFAULT_TRANSFORM, transform);
 }
 
 // ----- Image filters -----
-export function cloneFilters(
-    filters?: ImageObject['filters']
-): ImageObject['filters'] | undefined {
+export function cloneFilters(filters?: ImageFilters): ImageFilters | undefined {
     if (!filters) return undefined;
     return { ...filters };
 }
 
 export function mergeFiltersWithDefaults(
-    filters?: Partial<ImageObject['filters']>
-): typeof DEFAULT_FILTERS | undefined {
-    if (!filters) return undefined;
-    return { ...DEFAULT_FILTERS, ...filters };
+    filters?: Partial<ImageFilters>
+): ImageFilters | undefined {
+    return mergeWithDefaultsOptional(DEFAULT_FILTERS, filters);
 }
 
 // ----- Crop -----
-export function cloneCrop(
-    crop?: ImageObject['crop']
-): ImageObject['crop'] | undefined {
+export function cloneCrop(crop?: ImageCrop): ImageCrop | undefined {
     if (!crop) return undefined;
     return { ...crop };
 }
 
 export function mergeCropWithDefaults(
-    crop?: Partial<ImageObject['crop']>
-): typeof DEFAULT_CROP | undefined {
-    if (!crop) return undefined;
-    return { ...DEFAULT_CROP, ...crop };
+    crop?: Partial<ImageCrop>
+): ImageCrop | undefined {
+    return mergeWithDefaultsOptional(DEFAULT_CROP, crop);
 }
 
 // ----- Mask -----
-export function cloneMask(
-    mask?: ImageObject['mask']
-): ImageObject['mask'] | undefined {
+export function cloneMask(mask?: ImageMask): ImageMask | undefined {
     if (!mask) return undefined;
     return {
         ...mask,
