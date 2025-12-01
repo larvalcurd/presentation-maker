@@ -261,7 +261,6 @@ export function applyPatch(
         }
 
         if (hasOwnProp(p, 'filters')) {
-            // keep tests' expected semantics: when patch provided, merge with defaults/original as defined
             result.filters = mergeNestedWithPatch(
                 orig.filters,
                 p.filters,
@@ -302,3 +301,53 @@ export function applyPatch(
 
     return baseResult;
 }
+
+/*
+                ┌────────────────────────────┐
+                │        applyPatch          │
+                │ original + patch           │
+                └─────────────┬──────────────┘
+                              │
+                              ▼
+                    ┌───────────────────────┐
+                    │  applyPatchBase       │
+                    │  - копия оригинала    │
+                    │  - merge style        │
+                    │  - merge transform    │
+                    │  - merge scalar fields│
+                    └─────────────┬─────────┘
+                                  │
+            ┌─────────────────────┴─────────────────────┐
+            │                                           │
+            ▼                                           ▼
+┌─────────────────────────┐                 ┌─────────────────────────┐
+│ 'type' === 'image'      │                 │ 'type' === 'text'       │
+└─────────────┬───────────┘                 └─────────────┬───────────┘
+              │                                           │
+              ▼                                           ▼
+┌─────────────────────────────────┐          ┌────────────────────────────────┐
+│ Клон baseResult как ImageObject │          │ Клон baseResult как TextObject │
+└─────────────┬───────────────────┘          └─────────────┬──────────────────┘
+              │                                            │
+┌─────────────┴────────────┐                  ┌────────────┴───────────────┐
+│ Присвоение простых полей │                  │ Присвоение текстовых полей │
+│ src, preserveAspect, fit,│                  │ content, fontFamily,       │
+│ rotationOrigin           │                  │ fontSize, color, etc.      │
+└─────────────┬────────────┘                  └───────────┬────────────────┘
+              │                                           │
+┌─────────────┴────────────────────────────┐
+│ Вложенные поля ImageObject               │
+│ - crop → mergeNestedWithPatch / clone    │
+│ - filters → mergeNestedWithPatch / clone │
+│ - mask → clone / удаление                │
+└────────────┬─────────────────────────────┘
+             │
+             ▼
+    ┌───────────────┐
+    │   Результат   │
+    │ Новый объект: │
+    │ ImageObject,  │
+    │ TextObject или│
+    │ BaseObject    │
+    └───────────────┘
+*/
