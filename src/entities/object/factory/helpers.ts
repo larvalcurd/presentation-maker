@@ -83,6 +83,24 @@ export function mergeFiltersWithDefaults(
     return mergeWithDefaultsOptional(DEFAULT_FILTERS, filters);
 }
 
+// file: `src/entities/object/factory/helpers.ts`
+export function mergePartialFiltersSafe(
+    original?: ImageFilters,
+    patch?: Partial<ImageFilters> | undefined
+): ImageFilters | undefined {
+    // patch === undefined => explicit removal
+    if (patch === undefined) return undefined;
+
+    // If there was no original filters object, do not apply DEFAULT_FILTERS;
+    // return a shallow copy of the provided partial (tests expect this).
+    if (original === undefined) {
+        return { ...(patch as ImageFilters) } as ImageFilters;
+    }
+
+    // Merge patch into original (preserve other original fields).
+    return { ...original, ...patch } as ImageFilters;
+}
+
 // ----- Crop -----
 export function cloneCrop(crop?: ImageCrop): ImageCrop | undefined {
     if (!crop) return undefined;
