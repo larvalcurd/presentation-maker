@@ -118,10 +118,10 @@ describe('ObjectFactory', () => {
             expect(updatedText.content).toBe('Updated');
             expect(updatedText.style).toEqual({
                 borderRadius: 10,
-                borderWidth: 0, // DEFAULT_STYLE.borderWidth
-                borderColor: '#000000', // DEFAULT_STYLE.borderColor
-                shadow: undefined,
+                borderWidth: 2, // preserved from maximal original style
                 backgroundColor: '#F0F0F0',
+                borderColor: '#000000',
+                shadow: undefined,
             });
         });
     });

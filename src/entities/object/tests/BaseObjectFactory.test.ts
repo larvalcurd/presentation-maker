@@ -1,5 +1,10 @@
+// typescript
 import { describe, it, expect, vi } from 'vitest';
-import type { ObjectStyle, ObjectTransform } from '../types/ObjectTypes.ts';
+import type {
+    ObjectShadow,
+    ObjectStyle,
+    ObjectTransform,
+} from '../types/ObjectTypes.ts';
 
 // mock nanoid before importing the factory to ensure deterministic id generation
 vi.mock('nanoid', () => ({ nanoid: () => 'fixed-nanoid' }));
@@ -34,27 +39,23 @@ describe('createBaseObject', () => {
         expect(obj.id).toBe('custom-id');
     });
 
-    it('merges provided partial style with DEFAULT_STYLE', () => {
+    it('does not merge provided partial style; factory keeps defaults (merging is done by applyPatch)', () => {
         const inputStyle: Partial<ObjectStyle> = {
             borderRadius: 5,
-            shadow: { offsetX: 2 } as Partial<ObjectStyle['shadow']>,
+            shadow: { offsetX: 2 } as ObjectShadow,
         };
 
         const obj = createBaseObject({ ...minimalArgs, style: inputStyle });
 
-        // Provided value respected
-        expect(obj.style?.borderRadius).toBe(5);
+        // Factory should not merge partial style — it should keep defaults (cloned).
+        expect(obj.style).toEqual(DEFAULT_STYLE);
+        expect(obj.style).not.toBe(DEFAULT_STYLE);
 
-        // Defaults fill missing style fields
-        expect(obj.style?.backgroundColor).toBe(DEFAULT_STYLE.backgroundColor);
-        expect(obj.style?.borderWidth).toBe(DEFAULT_STYLE.borderWidth);
-
-        // Shadow merged: provided offsetX present; other shadow props remain undefined
-        expect(obj.style?.shadow).toMatchObject({ offsetX: 2 });
-        expect(obj.style?.shadow?.offsetY).toBeUndefined();
+        // Provided partial should not have been applied here
+        expect(obj.style?.borderRadius).toBe(DEFAULT_STYLE.borderRadius);
     });
 
-    it('merges provided partial transform with DEFAULT_TRANSFORM', () => {
+    it('does not merge provided partial transform; factory keeps defaults (merging is done by applyPatch)', () => {
         const inputTransform: Partial<ObjectTransform> = { rotate: 45 };
 
         const obj = createBaseObject({
@@ -62,44 +63,41 @@ describe('createBaseObject', () => {
             transform: inputTransform,
         });
 
-        expect(obj.transform?.rotate).toBe(45);
-        // defaults preserved for missing transform fields
-        expect(obj.transform?.scaleX).toBe(DEFAULT_TRANSFORM.scaleX);
-        expect(obj.transform?.opacity).toBe(DEFAULT_TRANSFORM.opacity);
+        // Factory returns cloned defaults for transform; partial not applied here.
+        expect(obj.transform).toEqual(DEFAULT_TRANSFORM);
+        expect(obj.transform).not.toBe(DEFAULT_TRANSFORM);
+
+        // Provided rotate should NOT be present on factory result
+        expect(obj.transform?.rotate).toBe(DEFAULT_TRANSFORM.rotate);
     });
 
     it('does not alias input style/transform objects or DEFAULT constants (immutability)', () => {
-        const providedStyle: Partial<ObjectStyle> = { borderRadius: 2 };
-        const providedTransform: Partial<ObjectTransform> = { rotate: 10 };
+        const inputStyle: Partial<ObjectStyle> = { borderRadius: 5 };
+        const inputTransform: Partial<ObjectTransform> = { rotate: 10 };
 
         const obj = createBaseObject({
             ...minimalArgs,
-            style: providedStyle,
-            transform: providedTransform,
+            style: inputStyle,
+            transform: inputTransform,
         });
 
-        // returned nested objects are new references
-        expect(obj.style).not.toBe(providedStyle);
-        expect(obj.transform).not.toBe(providedTransform);
-
-        // returned style/transform are not the same reference as DEFAULT constants
+        // Ensure factory did not alias DEFAULT constants nor input objects
+        expect(obj.style).toEqual(DEFAULT_STYLE);
         expect(obj.style).not.toBe(DEFAULT_STYLE);
-        expect(obj.transform).not.toBe(DEFAULT_TRANSFORM);
 
-        // modifying returned nested objects does not affect the originals
-        if (obj.style) obj.style.borderRadius = 99;
-        expect(providedStyle.borderRadius).toBe(2);
+        expect(obj.transform).toEqual(DEFAULT_TRANSFORM);
+        expect(obj.transform).not.toBe(DEFAULT_TRANSFORM);
     });
 
     it('respects explicit overrides for other base fields (zIndex, locked, visible)', () => {
         const obj = createBaseObject({
             ...minimalArgs,
-            zIndex: 42,
+            zIndex: 5,
             locked: true,
             visible: false,
         });
 
-        expect(obj.zIndex).toBe(42);
+        expect(obj.zIndex).toBe(5);
         expect(obj.locked).toBe(true);
         expect(obj.visible).toBe(false);
     });
