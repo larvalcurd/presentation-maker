@@ -83,6 +83,18 @@ export function mergeFiltersWithDefaults(
     return mergeWithDefaultsOptional(DEFAULT_FILTERS, filters);
 }
 
+export function mergePartialFiltersSafe(
+    existing?: ImageFilters,
+    patch?: Partial<ImageFilters>
+): ImageFilters | undefined {
+    if (!patch) {
+        return cloneFilters(existing);
+    }
+    return existing
+        ? { ...existing, ...(patch as ImageFilters) }
+        : { ...(patch as ImageFilters) };
+}
+
 // ----- Crop -----
 export function cloneCrop(crop?: ImageCrop): ImageCrop | undefined {
     if (!crop) return undefined;
