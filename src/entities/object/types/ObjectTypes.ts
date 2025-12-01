@@ -11,6 +11,13 @@ export type BaseObject = {
     style?: ObjectStyle;
 };
 
+export type SlideObject = TextObject | ImageObject;
+
+export type ObjectSelection = {
+    slideId: string;
+    objectIds: string[];
+};
+
 export type TextObject = BaseObject & {
     type: 'text';
     content: string;
@@ -24,6 +31,14 @@ export type TextObject = BaseObject & {
     letterSpacing?: number;
 };
 
+export type RotationOrigin =
+    | 'center'
+    | 'top-left'
+    | 'top-right'
+    | 'bottom-left'
+    | 'bottom-right'
+    | { x: number; y: number };
+
 export type ImageObject = BaseObject & {
     type: 'image';
     src: string;
@@ -32,20 +47,15 @@ export type ImageObject = BaseObject & {
     crop?: ImageCrop;
     filters?: ImageFilters;
     mask?: ImageMask;
-    rotationOrigin?:
-        | 'center'
-        | 'top-left'
-        | 'top-right'
-        | 'bottom-left'
-        | 'bottom-right'
-        | { x: number; y: number };
+    rotationOrigin?: RotationOrigin;
 };
 
-export type SlideObject = TextObject | ImageObject;
-
-export type ObjectSelection = {
-    slideId: string;
-    objectIds: string[];
+export type ObjectStyle = {
+    borderRadius?: number;
+    borderColor?: string;
+    borderWidth?: number;
+    shadow?: ObjectShadow;
+    backgroundColor?: string;
 };
 
 export type ObjectShadow = {
@@ -53,6 +63,13 @@ export type ObjectShadow = {
     offsetY?: number;
     blur?: number;
     color?: string;
+};
+
+export type ObjectTransform = {
+    rotate?: number;
+    scaleX?: number;
+    scaleY?: number;
+    opacity?: number;
 };
 
 export type ImageCrop = {
@@ -70,28 +87,13 @@ export type ImageFilters = {
     grayscale?: number;
 };
 
-export type MaskPoint = {
-    x: number;
-    y: number;
-};
-
 export type ImageMask = {
     shape: 'circle' | 'rounded' | 'polygon' | 'none';
     radius?: number;
     points?: MaskPoint[];
 };
 
-export type ObjectTransform = {
-    rotate?: number;
-    scaleX?: number;
-    scaleY?: number;
-    opacity?: number;
-};
-
-export type ObjectStyle = {
-    borderRadius?: number;
-    borderColor?: string;
-    borderWidth?: number;
-    shadow?: ObjectShadow;
-    backgroundColor?: string;
+export type MaskPoint = {
+    x: number;
+    y: number;
 };
