@@ -42,9 +42,6 @@ export function createTextObject(params: CreateTextObjectParams): TextObject {
         letterSpacing: params.letterSpacing ?? 0,
     };
 
-    // If nested partials were provided in params (style/transform),
-    // apply them explicitly via applyPatch so merging semantics are consistent
-    // (merge with defaults/original occurs in helpers.applyPatch).
     if (params.style !== undefined || params.transform !== undefined) {
         const patched = applyPatch(original, {
             style: params.style,
