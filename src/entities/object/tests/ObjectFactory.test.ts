@@ -237,10 +237,7 @@ describe('ObjectFactory', () => {
             expect(patched.fit).toBe('cover');
             expect(patched.filters).toEqual({
                 brightness: 1.5,
-                contrast: 1,
-                saturation: 1,
                 blur: 3,
-                grayscale: 0,
             });
             expect(patched.crop).toEqual({
                 x: 10,
