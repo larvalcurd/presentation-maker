@@ -61,14 +61,19 @@ function assignIfHasOwn<T, K extends keyof T>(
     not to values from any original object)
 */
 function mergeNestedWithPatch<T extends object>(
+    original: T | undefined,
     patch: Partial<T> | undefined,
     defaults: T
 ): T | undefined {
     // patch === undefined -> explicit removal
     if (patch === undefined) return undefined;
 
-    // Build from defaults and apply patch only (ignore original)
-    return { ...defaults, ...(patch as Partial<T>) } as T;
+    // If we have an original nested object, merge patch into it (preserve existing values).
+    // If original is absent, build from defaults + patch.
+    if (original === undefined) {
+        return { ...defaults, ...(patch as Partial<T>) } as T;
+    }
+    return { ...original, ...(patch as Partial<T>) } as T;
 }
 
 // --- Style helpers ---------------------------------------------------------
@@ -189,7 +194,11 @@ export function applyPatchBase(
 
     // style (special nested merge semantics)
     if (hasOwnProp(patch, 'style')) {
-        result.style = mergeNestedWithPatch(patch.style, DEFAULT_STYLE);
+        result.style = mergeNestedWithPatch(
+            original.style,
+            patch.style,
+            DEFAULT_STYLE
+        );
     } else if (original.style) {
         result.style = cloneStyle(original.style);
     }
@@ -197,6 +206,7 @@ export function applyPatchBase(
     // transform
     if (hasOwnProp(patch, 'transform')) {
         result.transform = mergeNestedWithPatch(
+            original.transform,
             patch.transform,
             DEFAULT_TRANSFORM
         );
@@ -253,7 +263,7 @@ export function applyPatch(
         imageFields.forEach((f) => assignIfHasOwn(result, p, f));
 
         if (hasOwnProp(p, 'crop')) {
-            result.crop = mergeNestedWithPatch(p.crop, DEFAULT_CROP);
+            result.crop = mergeNestedWithPatch(orig.crop, p.crop, DEFAULT_CROP);
         } else if (orig.crop) {
             result.crop = cloneCrop(orig.crop);
         }
