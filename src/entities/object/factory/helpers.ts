@@ -52,20 +52,23 @@ function assignIfHasOwn<T, K extends keyof T>(
     }
 }
 
-// Unified nested-merge semantics used by tests: patch === undefined => explicit removal
+/*
+ Unified nested-merge semantics used by tests:
+
+ - patch === undefined -> explicit removal (return undefined)
+ - patch provided -> ignore any original nested object and return { ...defaults, ...patch }
+   (this ensures unspecified fields in the patch fall back to defaults,
+    not to values from any original object)
+*/
 function mergeNestedWithPatch<T extends object>(
-    original: T | undefined,
     patch: Partial<T> | undefined,
     defaults: T
 ): T | undefined {
+    // patch === undefined -> explicit removal
     if (patch === undefined) return undefined;
-    if (original === undefined)
-        return { ...defaults, ...(patch as Partial<T>) } as T;
-    return {
-        ...defaults,
-        ...(original as Partial<T>),
-        ...(patch as Partial<T>),
-    } as T;
+
+    // Build from defaults and apply patch only (ignore original)
+    return { ...defaults, ...(patch as Partial<T>) } as T;
 }
 
 // --- Style helpers ---------------------------------------------------------
@@ -186,11 +189,7 @@ export function applyPatchBase(
 
     // style (special nested merge semantics)
     if (hasOwnProp(patch, 'style')) {
-        result.style = mergeNestedWithPatch(
-            original.style,
-            patch.style,
-            DEFAULT_STYLE
-        );
+        result.style = mergeNestedWithPatch(patch.style, DEFAULT_STYLE);
     } else if (original.style) {
         result.style = cloneStyle(original.style);
     }
@@ -198,7 +197,6 @@ export function applyPatchBase(
     // transform
     if (hasOwnProp(patch, 'transform')) {
         result.transform = mergeNestedWithPatch(
-            original.transform,
             patch.transform,
             DEFAULT_TRANSFORM
         );
@@ -255,17 +253,14 @@ export function applyPatch(
         imageFields.forEach((f) => assignIfHasOwn(result, p, f));
 
         if (hasOwnProp(p, 'crop')) {
-            result.crop = mergeNestedWithPatch(orig.crop, p.crop, DEFAULT_CROP);
+            result.crop = mergeNestedWithPatch(p.crop, DEFAULT_CROP);
         } else if (orig.crop) {
             result.crop = cloneCrop(orig.crop);
         }
 
         if (hasOwnProp(p, 'filters')) {
-            result.filters = mergeNestedWithPatch(
-                orig.filters,
-                p.filters,
-                DEFAULT_FILTERS
-            );
+            // preserve original filters when present; if patch is undefined -> explicit removal
+            result.filters = mergePartialFiltersSafe(orig.filters, p.filters);
         } else if (orig.filters) {
             result.filters = cloneFilters(orig.filters);
         }
@@ -301,53 +296,3 @@ export function applyPatch(
 
     return baseResult;
 }
-
-/*
-                ┌────────────────────────────┐
-                │        applyPatch          │
-                │ original + patch           │
-                └─────────────┬──────────────┘
-                              │
-                              ▼
-                    ┌───────────────────────┐
-                    │  applyPatchBase       │
-                    │  - копия оригинала    │
-                    │  - merge style        │
-                    │  - merge transform    │
-                    │  - merge scalar fields│
-                    └─────────────┬─────────┘
-                                  │
-            ┌─────────────────────┴─────────────────────┐
-            │                                           │
-            ▼                                           ▼
-┌─────────────────────────┐                 ┌─────────────────────────┐
-│ 'type' === 'image'      │                 │ 'type' === 'text'       │
-└─────────────┬───────────┘                 └─────────────┬───────────┘
-              │                                           │
-              ▼                                           ▼
-┌─────────────────────────────────┐          ┌────────────────────────────────┐
-│ Клон baseResult как ImageObject │          │ Клон baseResult как TextObject │
-└─────────────┬───────────────────┘          └─────────────┬──────────────────┘
-              │                                            │
-┌─────────────┴────────────┐                  ┌────────────┴───────────────┐
-│ Присвоение простых полей │                  │ Присвоение текстовых полей │
-│ src, preserveAspect, fit,│                  │ content, fontFamily,       │
-│ rotationOrigin           │                  │ fontSize, color, etc.      │
-└─────────────┬────────────┘                  └───────────┬────────────────┘
-              │                                           │
-┌─────────────┴────────────────────────────┐
-│ Вложенные поля ImageObject               │
-│ - crop → mergeNestedWithPatch / clone    │
-│ - filters → mergeNestedWithPatch / clone │
-│ - mask → clone / удаление                │
-└────────────┬─────────────────────────────┘
-             │
-             ▼
-    ┌───────────────┐
-    │   Результат   │
-    │ Новый объект: │
-    │ ImageObject,  │
-    │ TextObject или│
-    │ BaseObject    │
-    └───────────────┘
-*/
