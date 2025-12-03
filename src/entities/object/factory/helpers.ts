@@ -127,19 +127,16 @@ export function mergeFiltersWithDefaults(
     return mergeWithDefaultsOptional(DEFAULT_FILTERS, filters);
 }
 
-/*
- Expected semantics:
- - patch === undefined -> explicit removal (return undefined)
- - original === undefined & patch provided -> return shallow copy of patch (do NOT apply DEFAULT_FILTERS)
- - otherwise merge patch into original preserving other original fields
-*/
 export function mergePartialFiltersSafe(
     original?: ImageFilters,
     patch?: Partial<ImageFilters> | undefined
 ): ImageFilters | undefined {
     if (patch === undefined) return undefined;
     if (original === undefined)
-        return { ...(patch as ImageFilters) } as ImageFilters;
+        return {
+            ...DEFAULT_FILTERS,
+            ...(patch as ImageFilters),
+        } as ImageFilters;
     return { ...original, ...patch } as ImageFilters;
 }
 
