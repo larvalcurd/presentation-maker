@@ -10,6 +10,7 @@ import {
     updateTextColor,
     updateTextStyle,
 } from '../utils/TextObjectUtils.ts';
+import type { TextObject } from '../types/ObjectTypes.ts';
 
 describe('TextObjectUtils - minimal & maximal cases', () => {
     // updateTextContent
@@ -174,5 +175,54 @@ describe('TextObjectUtils - minimal & maximal cases', () => {
         expect(updated.style).not.toBe(original.style);
         expect(updated.transform).not.toBe(original.transform);
         expect(original).toEqual(snapshot);
+    });
+
+    it('deep-clones nested shadow when updating (style.shadow not same reference)', () => {
+        const original = createMaximalText();
+        const snapshot = JSON.parse(JSON.stringify(original));
+
+        const updated = updateTextFontSize(original, 99);
+
+        // top-level style cloned
+        expect(updated.style).not.toBe(original.style);
+        // nested shadow must also be a new object
+        expect(updated.style?.shadow).not.toBe(original.style?.shadow);
+        // values preserved
+        expect(updated.style?.shadow).toEqual(original.style?.shadow);
+
+        expect(original).toEqual(snapshot);
+    });
+
+    it('works when style/transform are undefined on input (preserves undefined and does not crash)', () => {
+        const bare: TextObject = {
+            id: 't-bare',
+            type: 'text',
+            x: 0,
+            y: 0,
+            zIndex: 0,
+            width: 100,
+            height: 50,
+            content: 'initial',
+            fontFamily: 'Arial',
+            fontSize: 12,
+            color: '#000000',
+            fontWeight: 'normal',
+            fontStyle: 'normal',
+            textAlign: 'left',
+            lineHeight: 1.2,
+            letterSpacing: 0,
+            // intentionally no style, no transform
+        };
+
+        const updatedContent = updateTextContent(bare, 'new-content');
+        expect(updatedContent.content).toBe('new-content');
+        expect(updatedContent.style).toBeUndefined();
+        expect(updatedContent.transform).toBeUndefined();
+        expect(updatedContent).not.toBe(bare);
+
+        const updatedStyleFields = updateTextStyle(bare, { fontSize: 20 });
+        expect(updatedStyleFields.fontSize).toBe(20);
+        expect(updatedStyleFields.style).toBeUndefined();
+        expect(updatedStyleFields.transform).toBeUndefined();
     });
 });
