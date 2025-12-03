@@ -22,6 +22,7 @@ import {
     deepCloneNestedBase,
     mergeCropWithDefaults,
     mergeFiltersWithDefaults,
+    mergePartialFiltersSafe,
     mergeStyleWithDefaults,
     mergeTransformWithDefaults,
 } from '../factory/helpers.ts';
@@ -241,5 +242,111 @@ describe('deep clone and applyPatch semantics', () => {
         } as Partial<ImageObject>);
         expect(patched).not.toBe(orig);
         expect(patched.filters).not.toBe(orig.filters);
+    });
+});
+
+describe('additional helpers tests', () => {
+    it('mergePartialFiltersSafe: original undefined -> merge into DEFAULT_FILTERS', () => {
+        const patch = { brightness: 1.2, contrast: 0.9 };
+        const merged = mergePartialFiltersSafe(undefined, patch);
+        expect(merged).toEqual({
+            brightness: 1.2,
+            contrast: 0.9,
+            saturation: DEFAULT_FILTERS.saturation,
+            blur: DEFAULT_FILTERS.blur,
+            grayscale: DEFAULT_FILTERS.grayscale,
+        });
+    });
+
+    it('mergePartialFiltersSafe: patch undefined -> explicit removal (undefined)', () => {
+        const original = { brightness: 2, contrast: 1.5 };
+        const removed = mergePartialFiltersSafe(original, undefined);
+        expect(removed).toBeUndefined();
+    });
+
+    it('mergeTransformWithDefaults: original absent + partial -> defaults merged with patch', () => {
+        const partial = { rotate: 30 };
+        const merged = mergeTransformWithDefaults(partial);
+        expect(merged.rotate).toBe(30);
+        expect(merged.scaleX).toBe(DEFAULT_TRANSFORM.scaleX);
+        expect(merged.scaleY).toBe(DEFAULT_TRANSFORM.scaleY);
+    });
+
+    it('applyPatchBase clones style/transform when patch omits them', () => {
+        const base: BaseObject = {
+            id: 'b1',
+            x: 1,
+            y: 2,
+            zIndex: 0,
+            width: 10,
+            height: 10,
+            style: { ...DEFAULT_STYLE },
+            transform: { ...DEFAULT_TRANSFORM },
+        };
+        const patched = applyPatchBase(base, { x: 5 } as Partial<BaseObject>);
+        // equal but not same references
+        expect(patched.style).toEqual(base.style);
+        expect(patched.style).not.toBe(base.style);
+        expect(patched.transform).toEqual(base.transform);
+        expect(patched.transform).not.toBe(base.transform);
+    });
+    it('applyPatch: mask provided is cloned; mask: undefined removes mask', () => {
+        const img: ImageObject = {
+            id: 'i1',
+            type: 'image',
+            x: 0,
+            y: 0,
+            zIndex: 0,
+            width: 100,
+            height: 100,
+            src: 'a.png',
+            mask: {
+                shape: 'polygon',
+                points: [
+                    { x: 0, y: 0 },
+                    { x: 1, y: 1 },
+                ],
+            },
+        } as unknown as ImageObject;
+
+        const patchMask = { shape: 'polygon', points: [{ x: 2, y: 2 }] };
+        const patchedWithMask = applyPatch(img, {
+            mask: patchMask,
+        } as Partial<ImageObject>) as ImageObject;
+        expect(patchedWithMask.mask).toEqual({
+            shape: 'polygon',
+            points: [{ x: 2, y: 2 }],
+        });
+        // patched mask points should not be the same reference as the patch's points
+        expect(patchedWithMask.mask?.points).not.toBe(patchMask.points);
+
+        const patchedRemoveMask = applyPatch(img, {
+            mask: undefined,
+        } as Partial<ImageObject>) as ImageObject;
+        expect(patchedRemoveMask.mask).toBeUndefined();
+    });
+
+    it('cloneMask handles undefined points and does deep clone when points present', () => {
+        const m1 = { shape: 'rounded' as const };
+        const c1 = cloneMask(m1);
+        expect(c1).toEqual(m1);
+
+        const m2 = { shape: 'polygon' as const, points: [{ x: 1, y: 1 }] };
+        const c2 = cloneMask(m2);
+        expect(c2).toEqual(m2);
+        expect(c2?.points).not.toBe(m2.points);
+        expect(c2?.points?.[0]).not.toBe(m2.points?.[0]);
+    });
+
+    it('cloneFilters/cloneCrop produce new instances (not same reference) when present', () => {
+        const f = { brightness: 1.1 };
+        const cf = cloneFilters(f);
+        expect(cf).toEqual(f);
+        expect(cf).not.toBe(f);
+
+        const c = { x: 1, y: 1, width: 10, height: 10 };
+        const cc = cloneCrop(c);
+        expect(cc).toEqual(c);
+        expect(cc).not.toBe(c);
     });
 });

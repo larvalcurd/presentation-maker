@@ -122,4 +122,34 @@ describe('TextObjectFactory', () => {
             DEFAULT_STYLE.backgroundColor
         );
     });
+
+    it('explicit undefined style removes style when patch applied (transform provided to force patch)', () => {
+        const txt = createTextObject({
+            ...baseArgs,
+            // explicit undefined + any other patch field forces applyPatch to run
+            style: undefined,
+            transform: {},
+        });
+        expect(txt.style).toBeUndefined();
+    });
+
+    it('explicit undefined transform removes transform when patch applied (style provided to force patch)', () => {
+        const txt = createTextObject({
+            ...baseArgs,
+            transform: undefined,
+            style: {},
+        });
+        expect(txt.transform).toBeUndefined();
+    });
+
+    it('passing style: undefined without transform leaves defaults intact (no patch invoked)', () => {
+        const txt = createTextObject({
+            ...baseArgs,
+            style: undefined,
+            // transform omitted -> createTextObject should not invoke applyPatch and style stays as cloned defaults
+        });
+        // style should exist and equal defaults but not be the same reference
+        expect(txt.style).toEqual(DEFAULT_STYLE);
+        expect(txt.style).not.toBe(DEFAULT_STYLE);
+    });
 });
