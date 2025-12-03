@@ -97,8 +97,14 @@ describe('ImageObjectUtils - minimal & maximal cases', () => {
         const patch = { brightness: 1.2, contrast: 0.9 };
         const updated = updateImageFilters(original, patch);
 
-        // When original has no filters, result should equal provided partial (no defaults applied here)
-        expect(updated.filters).toEqual(patch);
+        // New behavior: when original has no filters, patch is merged into DEFAULT_FILTERS
+        expect(updated.filters).toEqual({
+            brightness: 1.2,
+            contrast: 0.9,
+            saturation: 1,
+            blur: 0,
+            grayscale: 0,
+        });
         expect(updated).not.toBe(original);
         // transform should be deep-copied
         expect(updated.transform).not.toBe(original.transform);
