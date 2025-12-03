@@ -187,4 +187,62 @@ describe('ImageObjectUtils - minimal & maximal cases', () => {
         expect(updated.filters).toEqual(original.filters);
         expect(original).toEqual(snapshot);
     });
+
+    // typescript
+    it('updateImageFilters - explicit undefined patch removes filters when original has filters', () => {
+        const original = createMaximalImage();
+        const snapshot = {
+            ...original,
+            transform: { ...original.transform },
+            filters: original.filters ? { ...original.filters } : undefined,
+            crop: original.crop ? { ...original.crop } : undefined,
+        };
+
+        const updated = updateImageFilters(original, undefined);
+
+        expect(updated.filters).toBeUndefined();
+        expect(updated).not.toBe(original);
+        // nested clones still created
+        expect(updated.transform).not.toBe(original.transform);
+        expect(updated.transform).toEqual(original.transform);
+        expect(updated.crop).not.toBe(original.crop);
+        expect(updated.crop).toEqual(original.crop);
+        // original unchanged
+        expect(original).toEqual(snapshot);
+    });
+
+    it('updateImageFilters - explicit undefined patch on minimal (no original filters) results in undefined filters and clones nested', () => {
+        const original = createMinimalImage();
+        const snapshot = { ...original };
+
+        const updated = updateImageFilters(original, undefined);
+
+        expect(updated.filters).toBeUndefined();
+        expect(updated).not.toBe(original);
+        expect(updated.transform).not.toBe(original.transform);
+        expect(updated.transform).toEqual(original.transform);
+        expect(original).toEqual(snapshot);
+    });
+
+    it('updateImageCrop - passing undefined removes crop when original had crop', () => {
+        const original = createMaximalImage({
+            crop: { x: 10, y: 10, width: 200, height: 150 },
+        });
+        const snapshot = {
+            ...original,
+            transform: { ...original.transform },
+            filters: original.filters ? { ...original.filters } : undefined,
+            crop: original.crop ? { ...original.crop } : undefined,
+        };
+
+        const updated = updateImageCrop(original, undefined);
+
+        expect(updated.crop).toBeUndefined();
+        expect(updated).not.toBe(original);
+        expect(updated.transform).not.toBe(original.transform);
+        expect(updated.transform).toEqual(original.transform);
+        expect(updated.filters).not.toBe(original.filters);
+        expect(updated.filters).toEqual(original.filters);
+        expect(original).toEqual(snapshot);
+    });
 });
