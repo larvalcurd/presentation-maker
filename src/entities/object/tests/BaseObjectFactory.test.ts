@@ -111,4 +111,50 @@ describe('createBaseObject', () => {
         expect(obj.transform).toEqual(DEFAULT_TRANSFORM);
         expect(obj.transform).not.toBe(DEFAULT_TRANSFORM);
     });
+
+    // typescript
+    it('ignores provided full style and transform objects; factory keeps defaults', () => {
+        const fullStyle = {
+            borderRadius: 999,
+            borderColor: '#FF00FF',
+            borderWidth: 10,
+            shadow: { offsetX: 5, offsetY: 5, blur: 2, color: '#000' },
+            backgroundColor: '#FFFFFF',
+        };
+
+        const fullTransform = {
+            rotate: 180,
+            scaleX: 2,
+            scaleY: 0.5,
+            opacity: 0.2,
+        };
+
+        const obj = createBaseObject({
+            ...minimalArgs,
+            style: fullStyle,
+            transform: fullTransform,
+        });
+
+        // Factory must ignore provided nested inputs and return cloned defaults
+        expect(obj.style).toEqual(DEFAULT_STYLE);
+        expect(obj.style).not.toBe(fullStyle);
+
+        expect(obj.transform).toEqual(DEFAULT_TRANSFORM);
+        expect(obj.transform).not.toBe(fullTransform);
+    });
+
+    it('treats explicit undefined for style/transform as "not provided" and returns cloned defaults', () => {
+        const obj = createBaseObject({
+            ...minimalArgs,
+            // explicitly pass undefined to ensure behavior matches "omitted"
+            style: undefined,
+            transform: undefined,
+        });
+
+        expect(obj.style).toEqual(DEFAULT_STYLE);
+        expect(obj.style).not.toBe(DEFAULT_STYLE);
+
+        expect(obj.transform).toEqual(DEFAULT_TRANSFORM);
+        expect(obj.transform).not.toBe(DEFAULT_TRANSFORM);
+    });
 });
