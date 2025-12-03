@@ -27,6 +27,18 @@ import {
     mergeTransformWithDefaults,
 } from '../factory/helpers.ts';
 
+/*
+ Organized and readable tests.
+ Groups:
+  - defaults existence
+  - style helpers
+  - transform helpers
+  - filters & crop helpers
+  - mask helpers
+  - deep clone & applyPatch semantics
+  - additional helpers
+*/
+
 describe('defaults exports', () => {
     it('DEFAULT_STYLE, DEFAULT_TRANSFORM, DEFAULT_FILTERS, DEFAULT_CROP exist', () => {
         expect(DEFAULT_STYLE).toHaveProperty('backgroundColor');
@@ -81,6 +93,14 @@ describe('transform helpers', () => {
         expect(merged.rotate).toBe(45);
         expect(merged.scaleX).toBe(DEFAULT_TRANSFORM.scaleX);
     });
+
+    it('mergeTransformWithDefaults: original absent + partial -> defaults merged with patch', () => {
+        const partial = { rotate: 30 };
+        const merged = mergeTransformWithDefaults(partial);
+        expect(merged.rotate).toBe(30);
+        expect(merged.scaleX).toBe(DEFAULT_TRANSFORM.scaleX);
+        expect(merged.scaleY).toBe(DEFAULT_TRANSFORM.scaleY);
+    });
 });
 
 describe('filters & crop helpers', () => {
@@ -104,19 +124,62 @@ describe('filters & crop helpers', () => {
         expect(merged?.contrast).toBe(DEFAULT_FILTERS.contrast);
     });
 
+    it('mergePartialFiltersSafe: original undefined -> merge into DEFAULT_FILTERS', () => {
+        const patch = { brightness: 1.2, contrast: 0.9 };
+        const merged = mergePartialFiltersSafe(undefined, patch);
+        expect(merged).toEqual({
+            brightness: 1.2,
+            contrast: 0.9,
+            saturation: DEFAULT_FILTERS.saturation,
+            blur: DEFAULT_FILTERS.blur,
+            grayscale: DEFAULT_FILTERS.grayscale,
+        });
+    });
+
+    it('mergePartialFiltersSafe: patch undefined -> explicit removal (undefined)', () => {
+        const original = { brightness: 2, contrast: 1.5 };
+        const removed = mergePartialFiltersSafe(original, undefined);
+        expect(removed).toBeUndefined();
+    });
+
     it('cloneCrop and mergeCropWithDefaults behave as expected', () => {
         const c = { x: 5, y: 5, width: 50, height: 50 };
         const cl = cloneCrop(c);
         expect(cl).toEqual(c);
         expect(cl).not.toBe(c);
+
         const merged = mergeCropWithDefaults({ x: 10 });
         expect(merged).toBeDefined();
         expect(merged?.x).toBe(10);
         expect(merged?.width).toBe(DEFAULT_CROP.width);
     });
+
+    it('cloneFilters/cloneCrop produce new instances (not same reference) when present', () => {
+        const f = { brightness: 1.1 };
+        const cf = cloneFilters(f);
+        expect(cf).toEqual(f);
+        expect(cf).not.toBe(f);
+
+        const c = { x: 1, y: 1, width: 10, height: 10 };
+        const cc = cloneCrop(c);
+        expect(cc).toEqual(c);
+        expect(cc).not.toBe(c);
+    });
 });
 
 describe('mask helper', () => {
+    it('cloneMask handles undefined points and does deep clone when points present', () => {
+        const m1 = { shape: 'rounded' as const };
+        const c1 = cloneMask(m1);
+        expect(c1).toEqual(m1);
+
+        const m2 = { shape: 'polygon' as const, points: [{ x: 1, y: 1 }] };
+        const c2 = cloneMask(m2);
+        expect(c2).toEqual(m2);
+        expect(c2?.points).not.toBe(m2.points);
+        expect(c2?.points?.[0]).not.toBe(m2.points?.[0]);
+    });
+
     it('cloneMask deep clones points array and does not share references', () => {
         const m = {
             shape: 'polygon' as const,
@@ -188,8 +251,6 @@ describe('deep clone and applyPatch semantics', () => {
     });
 
     it('applyPatchBase: partial style merges preferring original then patch/defaults', () => {
-        // Current helpers behavior: when original exists and patch is provided,
-        // the merge includes original fields unless overridden by patch.
         const orig = { ...baseObject };
         const patched = applyPatchBase(orig, {
             style: { borderRadius: 10 },
@@ -218,8 +279,6 @@ describe('deep clone and applyPatch semantics', () => {
     });
 
     it('applyPatch respects id present-with-undefined (explicit overwrite)', () => {
-        // Current helpers: scalar properties present in patch are assigned even if undefined,
-        // so id will become undefined when patch contains id: undefined.
         const patched = applyPatchBase(baseObject, {
             id: undefined,
         } as Partial<BaseObject>);
@@ -243,53 +302,7 @@ describe('deep clone and applyPatch semantics', () => {
         expect(patched).not.toBe(orig);
         expect(patched.filters).not.toBe(orig.filters);
     });
-});
 
-describe('additional helpers tests', () => {
-    it('mergePartialFiltersSafe: original undefined -> merge into DEFAULT_FILTERS', () => {
-        const patch = { brightness: 1.2, contrast: 0.9 };
-        const merged = mergePartialFiltersSafe(undefined, patch);
-        expect(merged).toEqual({
-            brightness: 1.2,
-            contrast: 0.9,
-            saturation: DEFAULT_FILTERS.saturation,
-            blur: DEFAULT_FILTERS.blur,
-            grayscale: DEFAULT_FILTERS.grayscale,
-        });
-    });
-
-    it('mergePartialFiltersSafe: patch undefined -> explicit removal (undefined)', () => {
-        const original = { brightness: 2, contrast: 1.5 };
-        const removed = mergePartialFiltersSafe(original, undefined);
-        expect(removed).toBeUndefined();
-    });
-
-    it('mergeTransformWithDefaults: original absent + partial -> defaults merged with patch', () => {
-        const partial = { rotate: 30 };
-        const merged = mergeTransformWithDefaults(partial);
-        expect(merged.rotate).toBe(30);
-        expect(merged.scaleX).toBe(DEFAULT_TRANSFORM.scaleX);
-        expect(merged.scaleY).toBe(DEFAULT_TRANSFORM.scaleY);
-    });
-
-    it('applyPatchBase clones style/transform when patch omits them', () => {
-        const base: BaseObject = {
-            id: 'b1',
-            x: 1,
-            y: 2,
-            zIndex: 0,
-            width: 10,
-            height: 10,
-            style: { ...DEFAULT_STYLE },
-            transform: { ...DEFAULT_TRANSFORM },
-        };
-        const patched = applyPatchBase(base, { x: 5 } as Partial<BaseObject>);
-        // equal but not same references
-        expect(patched.style).toEqual(base.style);
-        expect(patched.style).not.toBe(base.style);
-        expect(patched.transform).toEqual(base.transform);
-        expect(patched.transform).not.toBe(base.transform);
-    });
     it('applyPatch: mask provided is cloned; mask: undefined removes mask', () => {
         const img: ImageObject = {
             id: 'i1',
@@ -326,27 +339,22 @@ describe('additional helpers tests', () => {
         expect(patchedRemoveMask.mask).toBeUndefined();
     });
 
-    it('cloneMask handles undefined points and does deep clone when points present', () => {
-        const m1 = { shape: 'rounded' as const };
-        const c1 = cloneMask(m1);
-        expect(c1).toEqual(m1);
-
-        const m2 = { shape: 'polygon' as const, points: [{ x: 1, y: 1 }] };
-        const c2 = cloneMask(m2);
-        expect(c2).toEqual(m2);
-        expect(c2?.points).not.toBe(m2.points);
-        expect(c2?.points?.[0]).not.toBe(m2.points?.[0]);
-    });
-
-    it('cloneFilters/cloneCrop produce new instances (not same reference) when present', () => {
-        const f = { brightness: 1.1 };
-        const cf = cloneFilters(f);
-        expect(cf).toEqual(f);
-        expect(cf).not.toBe(f);
-
-        const c = { x: 1, y: 1, width: 10, height: 10 };
-        const cc = cloneCrop(c);
-        expect(cc).toEqual(c);
-        expect(cc).not.toBe(c);
+    it('applyPatchBase clones style/transform when patch omits them', () => {
+        const base: BaseObject = {
+            id: 'b1',
+            x: 1,
+            y: 2,
+            zIndex: 0,
+            width: 10,
+            height: 10,
+            style: { ...DEFAULT_STYLE },
+            transform: { ...DEFAULT_TRANSFORM },
+        };
+        const patched = applyPatchBase(base, { x: 5 } as Partial<BaseObject>);
+        // equal but not same references
+        expect(patched.style).toEqual(base.style);
+        expect(patched.style).not.toBe(base.style);
+        expect(patched.transform).toEqual(base.transform);
+        expect(patched.transform).not.toBe(base.transform);
     });
 });
