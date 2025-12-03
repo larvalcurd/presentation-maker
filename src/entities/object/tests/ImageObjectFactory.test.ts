@@ -142,4 +142,60 @@ describe('ImageObjectFactory', () => {
             DEFAULT_STYLE.backgroundColor
         );
     });
+
+    // typescript
+    it('applyPatch adds filters when original absent: merges into DEFAULT_FILTERS', () => {
+        const created = createMinimalImage({
+            filters: { brightness: 1.2 },
+        });
+        expect(created.filters).toEqual({
+            ...DEFAULT_FILTERS,
+            brightness: 1.2,
+        });
+    });
+
+    it('applyPatch explicit filters: undefined -> removes filters', () => {
+        const removed = createMaximalImage({ filters: undefined });
+        expect(removed.filters).toBeUndefined();
+    });
+
+    it('applyPatch explicit crop: undefined -> removes crop; adding crop when absent merges with DEFAULT_CROP', () => {
+        const removedCrop = createMaximalImage({ crop: undefined });
+        expect(removedCrop.crop).toBeUndefined();
+
+        const addedCrop = createMinimalImage({ crop: { x: 10 } });
+        expect(addedCrop.crop).toEqual({ ...DEFAULT_CROP, x: 10 });
+    });
+
+    it('mask override via overrides is cloned; mask: undefined removes mask', () => {
+        const providedMask = {
+            shape: 'polygon' as const,
+            points: [{ x: 1, y: 2 }],
+        };
+        const overridden = createMaximalImage({ mask: providedMask });
+        expect(overridden.mask).toEqual(providedMask);
+        // clone: returned object must not be the same reference as input
+        expect(overridden.mask).not.toBe(providedMask);
+        // removal
+        const removedMask = createMaximalImage({ mask: undefined });
+        expect(removedMask.mask).toBeUndefined();
+    });
+
+    it('explicit undefined style is treated as removal when patch applied (transform provided to force patch)', () => {
+        const img = createImageObject({
+            ...baseArgs,
+            style: undefined,
+            transform: {},
+        });
+        expect(img.style).toBeUndefined();
+    });
+
+    it('explicit undefined transform is treated as removal when patch applied (style provided to force patch)', () => {
+        const img = createImageObject({
+            ...baseArgs,
+            transform: undefined,
+            style: {},
+        });
+        expect(img.transform).toBeUndefined();
+    });
 });
