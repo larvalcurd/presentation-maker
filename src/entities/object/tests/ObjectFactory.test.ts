@@ -235,9 +235,13 @@ describe('ObjectFactory', () => {
 
             expect(patched.src).toBe('new-image.jpg');
             expect(patched.fit).toBe('cover');
+            // Updated expectation: merge into DEFAULT_FILTERS when original.filters was undefined
             expect(patched.filters).toEqual({
                 brightness: 1.5,
+                contrast: 1,
+                saturation: 1,
                 blur: 3,
+                grayscale: 0,
             });
             expect(patched.crop).toEqual({
                 x: 10,
