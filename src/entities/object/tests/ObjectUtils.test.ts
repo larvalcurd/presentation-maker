@@ -87,3 +87,42 @@ describe('ObjectUtils (use factory minimal/maximal helpers)', () => {
         }
     });
 });
+
+describe('ObjectUtils - additional shallow-copy / nested-ref checks', () => {
+    it('moveObject preserves nested object references (shallow copy) for TextObject', () => {
+        const original = createMaximalText({ id: 'text-ref-1' });
+        const moved = moveObject(original, 123, 456);
+
+        // top-level object is new
+        expect(moved).not.toBe(original);
+
+        // nested objects should be the same references (shallow copy semantics)
+        expect(moved.style).toBe(original.style);
+        expect(moved.transform).toBe(original.transform);
+
+        // scalar fields updated correctly and original unchanged
+        expect(moved.x).toBe(123);
+        expect(moved.y).toBe(456);
+        expect(original.x).not.toBe(123);
+        expect(original.y).not.toBe(456);
+    });
+
+    it('resizeObject preserves nested image-specific references (shallow copy) for ImageObject', () => {
+        const original = createMaximalImage({ id: 'img-ref-1' });
+        const resized = resizeObject(original, 640, 480);
+
+        // top-level object is new
+        expect(resized).not.toBe(original);
+
+        // image-specific nested fields should keep the same references
+        expect(resized.crop).toBe(original.crop);
+        expect(resized.filters).toBe(original.filters);
+        expect(resized.mask).toBe(original.mask);
+
+        // sizes updated correctly and original unchanged
+        expect(resized.width).toBe(640);
+        expect(resized.height).toBe(480);
+        expect(original.width).not.toBe(640);
+        expect(original.height).not.toBe(480);
+    });
+});
